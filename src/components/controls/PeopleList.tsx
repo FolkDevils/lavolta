@@ -27,7 +27,8 @@ export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDe
     setAdding(false);
   };
 
-  const startEdit = (p: Person) => {
+  const openEdit = (p: Person) => {
+    onSelect(p.id);
     setEditingId(p.id);
     setEditForm({ name: p.name, title: p.title, phone: p.phone, email: p.email });
   };
@@ -68,12 +69,14 @@ export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDe
               ))}
               <div className="flex gap-1.5">
                 <button
+                  type="button"
                   onClick={saveEdit}
                   className="flex-1 bg-[#ffd000] text-[#440031] rounded px-2 py-2 text-[11px] font-bold uppercase"
                 >
                   Save
                 </button>
                 <button
+                  type="button"
                   onClick={() => setEditingId(null)}
                   className="flex-1 bg-transparent text-[rgba(255,208,0,0.5)] border border-[rgba(255,208,0,0.15)] rounded px-2 py-2 text-[11px]"
                 >
@@ -87,8 +90,17 @@ export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDe
         return (
           <div
             key={p.id}
-            onClick={() => onSelect(p.id)}
-            className={`rounded-md cursor-pointer px-3 py-2.5 transition flex justify-between items-center border
+            onClick={() => openEdit(p)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openEdit(p);
+              }
+            }}
+            tabIndex={0}
+            aria-label={`Edit ${p.name}`}
+            title="Click to edit name, title, phone, and email"
+            className={`rounded-md cursor-pointer px-3 py-2.5 transition flex justify-between items-center border outline-none focus-visible:ring-1 focus-visible:ring-[rgba(255,208,0,0.45)] focus-visible:ring-offset-1 focus-visible:ring-offset-[#130009]
               ${sel
                 ? "bg-[#440031] border-[rgba(255,208,0,0.6)]"
                 : "bg-transparent border-[rgba(255,208,0,0.1)] hover:border-[rgba(255,208,0,0.25)]"}`}
@@ -101,9 +113,10 @@ export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDe
             </div>
             <div className="flex gap-1 shrink-0">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  startEdit(p);
+                  openEdit(p);
                 }}
                 className="text-[rgba(255,255,255,0.4)] hover:text-[#ffd000] text-[11px] px-1"
                 title="Edit"
@@ -112,6 +125,7 @@ export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDe
               </button>
               {people.length > 1 && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(p.id);
@@ -147,12 +161,14 @@ export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDe
           ))}
           <div className="flex gap-1.5">
             <button
+              type="button"
               onClick={submit}
               className="flex-1 bg-[#ffd000] text-[#440031] rounded px-2 py-2 text-[11px] font-bold uppercase"
             >
               Add
             </button>
             <button
+              type="button"
               onClick={() => {
                 setAdding(false);
                 setForm(emptyForm);
@@ -165,6 +181,7 @@ export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDe
         </div>
       ) : (
         <button
+          type="button"
           onClick={() => setAdding(true)}
           className="mt-1 py-2 px-3 bg-transparent border border-dashed border-[rgba(255,208,0,0.2)] rounded-md text-[rgba(255,208,0,0.45)] hover:text-[rgba(255,208,0,0.75)] hover:border-[rgba(255,208,0,0.4)] text-[11px] text-left transition"
         >
