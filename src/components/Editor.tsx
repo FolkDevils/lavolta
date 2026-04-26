@@ -4,11 +4,17 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BACK_LAYOUTS,
+  clampContactTelEmailGap,
   clampLogoOffsetX,
   clampLogoOffsetY,
   clampLogoScale,
+  clampNameTitleGap,
   clampTextOffsetX,
   clampTextOffsetY,
+  CONTACT_TEL_EMAIL_GAP_DEFAULT,
+  CONTACT_TEL_EMAIL_GAP_RANGE,
+  defaultNameTitleGap,
+  NAME_TITLE_GAP_RANGE,
   COLORS,
   DEFAULT_BACK,
   DEFAULT_FRONT,
@@ -94,18 +100,46 @@ export default function Editor() {
         const saved = JSON.parse(raw) as Partial<Saved>;
         if (saved.people?.length) setPeople(saved.people);
         if (saved.front) {
+          const layout = normalizeFrontLayout(saved.front.layout);
+          const baseGap = defaultNameTitleGap(layout);
+          const legacyFront = saved.front as FrontState & {
+            nameOffsetY?: number;
+            titleOffsetY?: number;
+          };
+          let nameTitleGap: number;
+          if (
+            typeof saved.front.nameTitleGap === "number" &&
+            Number.isFinite(saved.front.nameTitleGap)
+          ) {
+            nameTitleGap = clampNameTitleGap(saved.front.nameTitleGap);
+          } else if (
+            typeof legacyFront.nameOffsetY === "number" ||
+            typeof legacyFront.titleOffsetY === "number"
+          ) {
+            nameTitleGap = clampNameTitleGap(
+              baseGap +
+                (Number(legacyFront.titleOffsetY) || 0) -
+                (Number(legacyFront.nameOffsetY) || 0),
+            );
+          } else {
+            nameTitleGap = clampNameTitleGap(baseGap);
+          }
+          const nameTitleBlockOffsetY = clampTextOffsetY(
+            saved.front.nameTitleBlockOffsetY ?? legacyFront.nameOffsetY ?? 0,
+          );
           setFront({
             ...DEFAULT_FRONT,
             ...saved.front,
-            layout: normalizeFrontLayout(saved.front.layout),
+            layout,
             logo: normalizeLogoId(saved.front.logo),
             logoScale: clampLogoScale(saved.front.logoScale),
             logoOffsetX: clampLogoOffsetX(saved.front.logoOffsetX),
             logoOffsetY: clampLogoOffsetY(saved.front.logoOffsetY),
             textOffsetX: clampTextOffsetX(saved.front.textOffsetX),
-            nameOffsetY: clampTextOffsetY(saved.front.nameOffsetY),
-            titleOffsetY: clampTextOffsetY(saved.front.titleOffsetY),
+            nameTitleBlockOffsetY,
+            nameTitleGap,
             contactOffsetY: clampTextOffsetY(saved.front.contactOffsetY),
+            contactTelEmailGap: clampContactTelEmailGap(saved.front.contactTelEmailGap),
             color: normalizeColorValue(saved.front.color, "dark"),
             textFill: saved.front.textFill ?? null,
             subTextFill: saved.front.subTextFill ?? null,
@@ -459,7 +493,22 @@ export default function Editor() {
 
                 <div>
                   <SectionLabel>Layout</SectionLabel>
-                  <ChipRow options={FRONT_LAYOUTS} value={front.layout} onChange={(v) => upF("layout", v)} />
+                  <ChipRow
+                    options={FRONT_LAYOUTS}
+                    value={front.layout}
+                    onChange={(v) =>
+                      setFront((f) => {
+                        const prevDef = defaultNameTitleGap(f.layout);
+                        const nextDef = defaultNameTitleGap(v);
+                        const preserveGap = f.nameTitleGap !== prevDef;
+                        return {
+                          ...f,
+                          layout: v,
+                          nameTitleGap: preserveGap ? f.nameTitleGap : clampNameTitleGap(nextDef),
+                        };
+                      })
+                    }
+                  />
                 </div>
 
                 <Divider />
@@ -724,9 +773,9 @@ function formatSigned(v: number): string {
 }
 
 /** Text-positioning controls. One shared X slider slides the whole column;
- *  individual Y sliders per block give designers fine control of the gaps
- *  between name, title, and the phone+email group. Collapsible to keep the
- *  default panel compact. */
+ *  name + title share one Y nudge; a separate gap slider sets space between
+ *  them (where the layout uses a vertical name→title stack). Contact has
+ *  its own Y nudge plus TEL/EMAIL row gap for stack layouts. Collapsible. */
 function PositioningPanel({
   front,
   onChange,
@@ -735,18 +784,27 @@ function PositioningPanel({
   onChange: (patch: Partial<FrontState>) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const gapDefault = defaultNameTitleGap(front.layout);
+  const usesNameTitleGap =
+    front.layout === "stack" ||
+    front.layout === "stack_logo_left" ||
+    front.layout === "stack_logo_right" ||
+    front.layout === "centered" ||
+    front.layout === "bold";
   const dirty =
     front.textOffsetX !== 0 ||
-    front.nameOffsetY !== 0 ||
-    front.titleOffsetY !== 0 ||
-    front.contactOffsetY !== 0;
+    front.nameTitleBlockOffsetY !== 0 ||
+    front.contactOffsetY !== 0 ||
+    front.contactTelEmailGap !== CONTACT_TEL_EMAIL_GAP_DEFAULT ||
+    (usesNameTitleGap && front.nameTitleGap !== gapDefault);
 
   const reset = () =>
     onChange({
       textOffsetX: 0,
-      nameOffsetY: 0,
-      titleOffsetY: 0,
+      nameTitleBlockOffsetY: 0,
+      nameTitleGap: defaultNameTitleGap(front.layout),
       contactOffsetY: 0,
+      contactTelEmailGap: CONTACT_TEL_EMAIL_GAP_DEFAULT,
     });
 
   return (
@@ -783,23 +841,29 @@ function PositioningPanel({
           />
           <div className="h-px bg-[rgba(255,208,0,0.08)]" />
           <FDRange
-            label="Name · Y"
+            label="Name + title · Y"
             min={-TEXT_OFFSET_RANGE.y}
             max={TEXT_OFFSET_RANGE.y}
             step={TEXT_OFFSET_RANGE.step}
-            value={front.nameOffsetY}
-            onChange={(v) => onChange({ nameOffsetY: v })}
+            value={front.nameTitleBlockOffsetY}
+            onChange={(v) => onChange({ nameTitleBlockOffsetY: v })}
             formatLabel={formatSigned}
           />
           <FDRange
-            label="Title · Y"
-            min={-TEXT_OFFSET_RANGE.y}
-            max={TEXT_OFFSET_RANGE.y}
-            step={TEXT_OFFSET_RANGE.step}
-            value={front.titleOffsetY}
-            onChange={(v) => onChange({ titleOffsetY: v })}
-            formatLabel={formatSigned}
+            label="Name / title gap"
+            min={NAME_TITLE_GAP_RANGE.min}
+            max={NAME_TITLE_GAP_RANGE.max}
+            step={NAME_TITLE_GAP_RANGE.step}
+            value={front.nameTitleGap}
+            onChange={(v) => onChange({ nameTitleGap: v })}
+            formatLabel={(v) => `${Math.round(v)}`}
+            disabled={!usesNameTitleGap}
           />
+          {!usesNameTitleGap ? (
+            <p className="text-[8px] text-[rgba(255,208,0,0.35)] leading-snug -mt-1">
+              Gap applies to Stack, Centered, and Bold layouts (title sits under the name).
+            </p>
+          ) : null}
           <FDRange
             label="Phone + Email · Y"
             min={-TEXT_OFFSET_RANGE.y}
@@ -808,6 +872,15 @@ function PositioningPanel({
             value={front.contactOffsetY}
             onChange={(v) => onChange({ contactOffsetY: v })}
             formatLabel={formatSigned}
+          />
+          <FDRange
+            label="TEL / Email row gap (stack layouts)"
+            min={CONTACT_TEL_EMAIL_GAP_RANGE.min}
+            max={CONTACT_TEL_EMAIL_GAP_RANGE.max}
+            step={CONTACT_TEL_EMAIL_GAP_RANGE.step}
+            value={front.contactTelEmailGap}
+            onChange={(v) => onChange({ contactTelEmailGap: v })}
+            formatLabel={(v) => `${Math.round(v)}`}
           />
           {dirty ? (
             <button

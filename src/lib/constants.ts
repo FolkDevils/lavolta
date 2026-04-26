@@ -103,6 +103,18 @@ export function clampTextOffsetY(n: unknown): number {
   return clampNumber(n, TEXT_OFFSET_RANGE.y);
 }
 
+/** TEL vs EMAIL row spacing in stack layouts (viewBox units). */
+export const CONTACT_TEL_EMAIL_GAP_DEFAULT = 28;
+export const CONTACT_TEL_EMAIL_GAP_RANGE = { min: 14, max: 56, step: 1 } as const;
+
+export function clampContactTelEmailGap(n: unknown): number {
+  const x = typeof n === "number" && Number.isFinite(n) ? n : CONTACT_TEL_EMAIL_GAP_DEFAULT;
+  return Math.min(
+    CONTACT_TEL_EMAIL_GAP_RANGE.max,
+    Math.max(CONTACT_TEL_EMAIL_GAP_RANGE.min, x),
+  );
+}
+
 /* ── Print dimensions (Standard US business card) ──────────────────
  * Finished size: 3.5" × 2.0"
  * Bleed: 0.125" on all sides
@@ -125,6 +137,36 @@ export const VB_W = Math.round((FINISHED_W_IN + 2 * BLEED_IN) * INCH); // 600
 export const VB_H = Math.round((FINISHED_H_IN + 2 * BLEED_IN) * INCH); // 360
 export const BLEED = Math.round(BLEED_IN * INCH); // 20
 export const SAFE_INSET = BLEED * 2; // 40 (0.25" from bleed edge)
+
+/** Name→title vertical spacing defaults by layout (viewBox units). */
+const _NAME_TITLE_PAD = SAFE_INSET + 20;
+const _NAME_TITLE_CONTENT_H = VB_H - _NAME_TITLE_PAD * 2;
+export const NAME_TITLE_GAP_DEFAULT_STACK = 18;
+export const NAME_TITLE_GAP_DEFAULT_CENTERED = 22;
+export const NAME_TITLE_GAP_DEFAULT_BOLD = Math.round(
+  _NAME_TITLE_PAD + _NAME_TITLE_CONTENT_H - 34 - (_NAME_TITLE_PAD + _NAME_TITLE_CONTENT_H * 0.58),
+);
+
+export function defaultNameTitleGap(layout: FrontLayout): number {
+  switch (layout) {
+    case "centered":
+      return NAME_TITLE_GAP_DEFAULT_CENTERED;
+    case "bold":
+      return NAME_TITLE_GAP_DEFAULT_BOLD;
+    case "text_left":
+    case "logo_left":
+      return NAME_TITLE_GAP_DEFAULT_STACK;
+    default:
+      return NAME_TITLE_GAP_DEFAULT_STACK;
+  }
+}
+
+export const NAME_TITLE_GAP_RANGE = { min: 8, max: 100, step: 1 } as const;
+
+export function clampNameTitleGap(n: unknown): number {
+  const x = typeof n === "number" && Number.isFinite(n) ? n : NAME_TITLE_GAP_DEFAULT_STACK;
+  return Math.min(NAME_TITLE_GAP_RANGE.max, Math.max(NAME_TITLE_GAP_RANGE.min, x));
+}
 
 /* Pixel dimensions at 300 DPI for raster export */
 export const PX_W = Math.round((FINISHED_W_IN + 2 * BLEED_IN) * DPI); // 1125
@@ -320,9 +362,10 @@ export const DEFAULT_FRONT: FrontState = {
   logoOffsetX: 0,
   logoOffsetY: 0,
   textOffsetX: 0,
-  nameOffsetY: 0,
-  titleOffsetY: 0,
+  nameTitleBlockOffsetY: 0,
+  nameTitleGap: NAME_TITLE_GAP_DEFAULT_STACK,
   contactOffsetY: 0,
+  contactTelEmailGap: CONTACT_TEL_EMAIL_GAP_DEFAULT,
   layout: "stack",
   pat: { ...DEFAULT_PATTERN },
 };

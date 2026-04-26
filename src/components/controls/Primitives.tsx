@@ -55,6 +55,7 @@ type FDRangeProps = {
   unit?: string;
   /** When set, replaces the numeric `value` + `unit` display (e.g. ×1.05). */
   formatLabel?: (v: number) => string;
+  disabled?: boolean;
 };
 
 export function FDRange({
@@ -66,9 +67,10 @@ export function FDRange({
   onChange,
   unit = "",
   formatLabel,
+  disabled = false,
 }: FDRangeProps) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={`flex flex-col gap-1.5 ${disabled ? "opacity-45" : ""}`}>
       <div className="flex justify-between">
         <span className="text-[9px] uppercase tracking-[0.09em] text-[rgba(255,208,0,0.5)]">{label}</span>
         <span className="text-[9px] font-bold text-[#ffd000]">
@@ -81,7 +83,9 @@ export function FDRange({
         max={max}
         step={step}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
+        className={disabled ? "cursor-not-allowed" : undefined}
       />
     </div>
   );

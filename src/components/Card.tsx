@@ -3,6 +3,8 @@
 import { forwardRef, useId } from "react";
 import {
   BLEED,
+  clampContactTelEmailGap,
+  clampNameTitleGap,
   COLORS,
   DEFAULT_QR_LINKS,
   LOGOS,
@@ -176,13 +178,16 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
   };
 
   /* Positioning:
-   *   - A single `textOffsetX` slides the whole text column left/right.
-   *   - Each block gets its own Y nudge so designers can tighten or loosen
-   *     individual vertical gaps without touching the horizontal layout. */
+   *   - `textOffsetX` slides the whole text column left/right.
+   *   - `nameTitleBlockOffsetY` moves name + title together on Y.
+   *   - `nameTitleGap` controls vertical space between name baseline and title
+   *     (stack, centered, bold). Contact block has its own Y nudge. */
   const tx = fs.textOffsetX ?? 0;
-  const nameTx = `translate(${tx}, ${fs.nameOffsetY ?? 0})`;
-  const titleTx = `translate(${tx}, ${fs.titleOffsetY ?? 0})`;
+  const blockY = fs.nameTitleBlockOffsetY ?? 0;
+  const nameTx = `translate(${tx}, ${blockY})`;
+  const titleTx = `translate(${tx}, ${blockY})`;
   const contactTx = `translate(${tx}, ${fs.contactOffsetY ?? 0})`;
+  const nameTitleGap = clampNameTitleGap(fs.nameTitleGap);
 
   /** Shared stack column (name, title, contact) that can anchor left or right,
    *  and stack either vertically distributed (full card height, like the classic
@@ -209,10 +214,10 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
      *   - label/value order flips with anchor so the label stays *outside*
      *     the value in the reading direction
      *   - 56-unit gutter keeps "EMAIL" clear of its value
-     *   - 28-unit row spacing gives 13pt type comfortable rhythm */
+     *   - row spacing between TEL and EMAIL is user-controlled (`contactTelEmailGap`). */
     const labelX = isEnd ? xRight : xLeft;
     const valueX = isEnd ? xRight - 56 : xLeft + 56;
-    const rowGap = 28;
+    const rowGap = clampContactTelEmailGap(fs.contactTelEmailGap);
 
     /* Y positions for each line. `distributed` keeps the classic stack where
      * name/title sit mid-card and contacts pin to the bottom. `centered` packs
@@ -227,7 +232,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
     const CY = VB_H / 2;
     const nameY =
       verticalMode === "centered" ? CY - 32 : CONTENT_Y + CONTENT_H * 0.46;
-    const titleY = nameY + 18;
+    const titleY = nameY + nameTitleGap;
     const contactTopY =
       verticalMode === "centered" ? CY + 36 : CONTENT_Y + CONTENT_H - 44;
     const contactBottomY = contactTopY + rowGap;
@@ -382,7 +387,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
         <g transform={titleTx}>
           <Txt
             x={VB_W / 2}
-            y={VB_H / 2 + 28}
+            y={VB_H / 2 + 6 + nameTitleGap}
             fontSize={10}
             fontWeight={600}
             fill={subFill}
@@ -432,7 +437,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
         <g transform={titleTx}>
           <Txt
             x={CONTENT_X}
-            y={CONTENT_Y + CONTENT_H - 34}
+            y={CONTENT_Y + CONTENT_H * 0.58 + nameTitleGap}
             fontSize={10}
             fontWeight={700}
             fill={subFill}

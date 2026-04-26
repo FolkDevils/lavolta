@@ -80,10 +80,13 @@ export type FrontState = {
   /** Horizontal nudge applied to every text block (name, title, contact)
    *  so the whole column slides together. */
   textOffsetX: number;
-  /** Per-block vertical nudges (viewBox units). 0 = layout default. */
-  nameOffsetY: number;
-  titleOffsetY: number;
+  /** Vertical nudge applied equally to name + title (keeps their relative spacing). */
+  nameTitleBlockOffsetY: number;
+  /** Vertical distance from name baseline to title (stack, centered, bold). */
+  nameTitleGap: number;
   contactOffsetY: number;
+  /** Vertical distance (viewBox units) between the TEL row and EMAIL row in stack layouts. */
+  contactTelEmailGap: number;
   layout: FrontLayout;
   pat: PatternConfig;
 };
