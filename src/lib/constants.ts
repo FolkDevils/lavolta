@@ -376,7 +376,7 @@ export const DEFAULT_PEOPLE: Person[] = [
   {
     id: 1,
     name: "Ted Royer",
-    title: "Chief Creative Office",
+    title: "CCO / FOUNDER",
     phone: "(646) 621-0279",
     email: "ted@folkdevils.io",
   },
