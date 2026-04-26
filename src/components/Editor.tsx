@@ -243,22 +243,12 @@ export default function Editor() {
         </div>
       ) : null}
       <header className="bg-[#200016] border-b border-[rgba(255,208,0,0.1)] h-12 px-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/fd/icon.svg"
-            alt="Folk Devils"
-            width={28}
-            height={28}
-            className="h-7 w-auto"
-            style={{ filter: "brightness(0) saturate(100%) invert(85%) sepia(47%) saturate(3900%) hue-rotate(2deg) brightness(110%)" }}
-          />
-          <div>
-            <div className="text-[11px] font-bold text-[#ffd000] uppercase tracking-[0.1em] leading-none">
-              Folk Devils
-            </div>
-            <div className="text-[8px] text-[rgba(255,208,0,0.45)] uppercase tracking-[0.14em] leading-none mt-1">
-              Business Card Builder
-            </div>
+        <div>
+          <div className="text-[11px] font-bold text-[#ffd000] uppercase tracking-[0.1em] leading-none">
+            Folk Devils
+          </div>
+          <div className="text-[8px] text-[rgba(255,208,0,0.45)] uppercase tracking-[0.14em] leading-none mt-1">
+            Business Card Builder
           </div>
         </div>
 
