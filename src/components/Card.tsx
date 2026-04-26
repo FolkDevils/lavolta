@@ -83,7 +83,7 @@ function CardShell({
             width={VB_W - SAFE_INSET * 2}
             height={VB_H - SAFE_INSET * 2}
             fill="none"
-            stroke="#5a0044"
+            stroke="#ff58cd"
             strokeDasharray="4 4"
             strokeWidth={1}
           />
