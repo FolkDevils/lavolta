@@ -25,7 +25,18 @@ export type ColorValue = string;
 
 export type LogoId = "lg_full" | "ic_full" | "none";
 
-export type FrontLayout = "stack" | "centered" | "bold" | "editorial";
+export type FrontLayout =
+  | "stack"
+  /** Stack column right-aligned, logo vertically centered on the LEFT. */
+  | "stack_logo_left"
+  /** Stack column left-aligned, logo vertically centered on the RIGHT. */
+  | "stack_logo_right"
+  | "centered"
+  | "bold"
+  /** Name + details left, logo top-right (replaces legacy `editorial`). */
+  | "text_left"
+  /** Logo top-left, name + details right. */
+  | "logo_left";
 export type BackLayout = "two_qr" | "logo_qr" | "type" | "minimal";
 
 /** QR color palette ids. Actual field is `string`, can also be a hex. */

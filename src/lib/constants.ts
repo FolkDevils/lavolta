@@ -206,11 +206,31 @@ export const LOGOS: LogoDef[] = [
 ];
 
 export const FRONT_LAYOUTS: { id: FrontLayout; name: string }[] = [
-  { id: "stack", name: "Left Stack" },
+  { id: "stack", name: "Stack" },
+  { id: "stack_logo_left", name: "Stack · Logo left (centered)" },
+  { id: "stack_logo_right", name: "Stack · Logo right (centered)" },
   { id: "centered", name: "Centered" },
   { id: "bold", name: "Bold Name" },
-  { id: "editorial", name: "Editorial" },
+  { id: "text_left", name: "Text left · Logo right" },
+  { id: "logo_left", name: "Logo left · Text right" },
 ];
+
+const VALID_FRONT_LAYOUT = new Set<FrontLayout>([
+  "stack",
+  "stack_logo_left",
+  "stack_logo_right",
+  "centered",
+  "bold",
+  "text_left",
+  "logo_left",
+]);
+
+/** Map legacy layout ids; clamp unknown values to `stack`. */
+export function normalizeFrontLayout(layout: unknown): FrontLayout {
+  if (layout === "editorial") return "text_left";
+  if (VALID_FRONT_LAYOUT.has(layout as FrontLayout)) return layout as FrontLayout;
+  return "stack";
+}
 
 export const BACK_LAYOUTS: { id: BackLayout; name: string }[] = [
   { id: "two_qr", name: "Two QRs" },
@@ -356,7 +376,7 @@ export const DEFAULT_PEOPLE: Person[] = [
   {
     id: 1,
     name: "Ted Royer",
-    title: "Creative Director",
+    title: "Chief Creative Office",
     phone: "(646) 621-0279",
     email: "ted@folkdevils.io",
   },

@@ -15,6 +15,7 @@ import {
   LOGO_SCALE_RANGE,
   LOGOS,
   normalizeColorValue,
+  normalizeFrontLayout,
   normalizeLogoId,
   normalizeQrBody,
   normalizeQrEye,
@@ -90,6 +91,7 @@ export default function Editor() {
           setFront({
             ...DEFAULT_FRONT,
             ...saved.front,
+            layout: normalizeFrontLayout(saved.front.layout),
             logo: normalizeLogoId(saved.front.logo),
             logoScale: clampLogoScale(saved.front.logoScale),
             color: normalizeColorValue(saved.front.color, "dark"),

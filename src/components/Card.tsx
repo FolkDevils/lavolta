@@ -158,74 +158,182 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
     );
   };
 
-  /* Layout renderers — all work inside the content box (CONTENT_X/Y/W/H) */
-  const layouts: Record<typeof fs.layout, React.ReactNode> = {
-    stack: (
+  /** Shared stack column (name, title, contact) that can anchor left or right,
+   *  and stack either vertically distributed (full card height, like the classic
+   *  `stack` where the logo sits top and the contact block is pinned to the
+   *  bottom) or compacted + centered (sits beside a vertically-centered logo).
+   *
+   *  When `anchor === "end"` everything flips to right-align; the contact
+   *  block mirrors so labels stay *outside* the values in the reading direction. */
+  const StackColumn = ({
+    anchor = "start",
+    xLeft,
+    xRight,
+    verticalMode = "distributed",
+  }: {
+    anchor?: "start" | "end";
+    xLeft: number;
+    xRight: number;
+    verticalMode?: "distributed" | "centered";
+  }) => {
+    const isEnd = anchor === "end";
+    const textAnchor: "start" | "end" = isEnd ? "end" : "start";
+    const nameX = isEnd ? xRight : xLeft;
+    /* Contact block:
+     *   - label/value order flips with anchor so the label stays *outside*
+     *     the value in the reading direction
+     *   - 56-unit gutter keeps "EMAIL" clear of its value
+     *   - 26-unit row spacing gives 13pt type comfortable rhythm */
+    const labelX = isEnd ? xRight : xLeft;
+    const valueX = isEnd ? xRight - 56 : xLeft + 56;
+
+    /* Y positions for each line. `distributed` keeps the original classic
+     * stack proportions; `centered` packs the block tight and centers it on
+     * the card so it balances visually with a mid-card logo.
+     *
+     * Block geometry for `centered`:
+     *   - name baseline   → CY − 30
+     *   - title hanging   → name baseline + 10
+     *   - TEL row         → CY + 24
+     *   - EMAIL row       → TEL + 26
+     *   …which puts the block roughly 120→236 on a 360-unit card, nicely
+     *   centered on VB_H/2 = 180. */
+    const CY = VB_H / 2;
+    const nameY =
+      verticalMode === "centered" ? CY - 30 : CONTENT_Y + CONTENT_H * 0.52;
+    const titleY =
+      verticalMode === "centered" ? CY - 30 + 10 : CONTENT_Y + CONTENT_H * 0.52 + 18;
+    const contactTopY = verticalMode === "centered" ? CY + 24 : CONTENT_Y + CONTENT_H - 42;
+    const contactBottomY =
+      verticalMode === "centered" ? CY + 50 : CONTENT_Y + CONTENT_H - 16;
+
+    return (
       <>
-        <Logo x={CONTENT_X} y={CONTENT_Y} h={56} />
         <Txt
-          x={CONTENT_X}
-          y={CONTENT_Y + CONTENT_H * 0.52}
+          x={nameX}
+          y={nameY}
           fontSize={34}
           fontWeight={700}
           fill={textFill}
+          textAnchor={textAnchor}
           dominantBaseline="alphabetic"
         >
           {person.name}
         </Txt>
         <Txt
-          x={CONTENT_X}
-          y={CONTENT_Y + CONTENT_H * 0.52 + 18}
+          x={nameX}
+          y={titleY}
           fontSize={11}
           fontWeight={600}
           fill={subFill}
           letterSpacing="0.14em"
+          textAnchor={textAnchor}
           dominantBaseline="hanging"
         >
           {person.title.toUpperCase()}
         </Txt>
-        {/* Contact block:
-         *   - label gutter widened so "EMAIL" clears its value (was 34 → 56)
-         *   - row spacing bumped for comfortable 13pt rhythm (was 18 → 26)
-         *   - baseline pinned so ascenders don't crowd the bleed edge */}
-        {(() => {
-          const labelX = CONTENT_X;
-          const valueX = CONTENT_X + 56;
-          const bottomY = CONTENT_Y + CONTENT_H - 16;
-          const topY = bottomY - 26;
-          return (
-            <g>
-              <Txt
-                x={labelX}
-                y={topY}
-                fontSize={9}
-                fontWeight={700}
-                fill={subFill}
-                letterSpacing="0.14em"
-              >
-                TEL
-              </Txt>
-              <Txt x={valueX} y={topY} fontSize={13} fill={textFill}>
-                {person.phone}
-              </Txt>
-              <Txt
-                x={labelX}
-                y={bottomY}
-                fontSize={9}
-                fontWeight={700}
-                fill={subFill}
-                letterSpacing="0.14em"
-              >
-                EMAIL
-              </Txt>
-              <Txt x={valueX} y={bottomY} fontSize={13} fill={textFill}>
-                {person.email}
-              </Txt>
-            </g>
-          );
-        })()}
+        <g>
+          <Txt
+            x={labelX}
+            y={contactTopY}
+            fontSize={9}
+            fontWeight={700}
+            fill={subFill}
+            letterSpacing="0.14em"
+            textAnchor={textAnchor}
+          >
+            TEL
+          </Txt>
+          <Txt
+            x={valueX}
+            y={contactTopY}
+            fontSize={13}
+            fill={textFill}
+            textAnchor={textAnchor}
+          >
+            {person.phone}
+          </Txt>
+          <Txt
+            x={labelX}
+            y={contactBottomY}
+            fontSize={9}
+            fontWeight={700}
+            fill={subFill}
+            letterSpacing="0.14em"
+            textAnchor={textAnchor}
+          >
+            EMAIL
+          </Txt>
+          <Txt
+            x={valueX}
+            y={contactBottomY}
+            fontSize={13}
+            fill={textFill}
+            textAnchor={textAnchor}
+          >
+            {person.email}
+          </Txt>
+        </g>
+      </>
+    );
+  };
+
+  /** Split layouts reserve one side for a vertically-centered logo and give
+   *  the text column the remaining width. `LOGO_COLUMN_W` has to cover the
+   *  widest rendering case — wordmark at ~2.43 aspect at `LOGO_CENTER_H` —
+   *  so the 34pt name never collides with the mark. */
+  const LOGO_CENTER_H = 80;
+  const LOGO_COLUMN_W = 200;
+  const GAP = 24;
+
+  /* Layout renderers — all work inside the content box (CONTENT_X/Y/W/H) */
+  const layouts: Record<typeof fs.layout, React.ReactNode> = {
+    stack: (
+      <>
+        <Logo x={CONTENT_X} y={CONTENT_Y} h={56} />
+        <StackColumn xLeft={CONTENT_X} xRight={CONTENT_X + CONTENT_W} />
       </>
     ),
+
+    stack_logo_left: (() => {
+      /* Logo pinned to the left edge, vertically centered. Text column right-
+       * aligned, occupying the remaining width minus the gap. */
+      const logoCX = CONTENT_X + LOGO_COLUMN_W / 2;
+      const textLeft = CONTENT_X + LOGO_COLUMN_W + GAP;
+      return (
+        <>
+          <Logo
+            x={logoCX}
+            y={VB_H / 2 - LOGO_CENTER_H / 2}
+            h={LOGO_CENTER_H}
+            align="middle"
+          />
+          <StackColumn
+            anchor="end"
+            xLeft={textLeft}
+            xRight={CONTENT_X + CONTENT_W}
+            verticalMode="centered"
+          />
+        </>
+      );
+    })(),
+
+    stack_logo_right: (() => {
+      /* Mirror of `stack_logo_left`: text left-aligned, logo center on the right. */
+      const logoCX = CONTENT_X + CONTENT_W - LOGO_COLUMN_W / 2;
+      const textRight = CONTENT_X + CONTENT_W - LOGO_COLUMN_W - GAP;
+      return (
+        <>
+          <Logo
+            x={logoCX}
+            y={VB_H / 2 - LOGO_CENTER_H / 2}
+            h={LOGO_CENTER_H}
+            align="middle"
+          />
+          <StackColumn xLeft={CONTENT_X} xRight={textRight} verticalMode="centered" />
+        </>
+      );
+    })(),
 
     centered: (
       <>
@@ -313,7 +421,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
       </>
     ),
 
-    editorial: (
+    text_left: (
       <>
         <Txt
           x={CONTENT_X}
@@ -351,6 +459,39 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           fill={textFill}
           textAnchor="end"
         >
+          {person.email}
+        </Txt>
+      </>
+    ),
+
+    logo_left: (
+      <>
+        <Logo x={CONTENT_X} y={CONTENT_Y} h={48} align="start" />
+        <Txt
+          x={CONTENT_X + CONTENT_W}
+          y={CONTENT_Y + 28}
+          fontSize={28}
+          fontWeight={700}
+          fill={textFill}
+          textAnchor="end"
+        >
+          {person.name}
+        </Txt>
+        <Txt
+          x={CONTENT_X + CONTENT_W}
+          y={CONTENT_Y + CONTENT_H - 20}
+          fontSize={10}
+          fontWeight={700}
+          fill={subFill}
+          letterSpacing="0.14em"
+          textAnchor="end"
+        >
+          {person.title.toUpperCase()}
+        </Txt>
+        <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 32} fontSize={12} fill={textFill}>
+          {person.phone}
+        </Txt>
+        <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 14} fontSize={12} fill={textFill}>
           {person.email}
         </Txt>
       </>
