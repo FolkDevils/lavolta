@@ -1,26 +1,109 @@
 @import "tailwindcss";
 
+/* ─── Folk Devils Design Tokens ────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --fd-purple-dark:    #650049;
+  --fd-purple-darker:  #29001d;
+  --fd-purple-darkest: #440031;
+  --fd-purple-mid:     #5a0044;
+  --fd-purple-ink:     #200016;
+  --fd-purple-abyss:   #130009;
+  --fd-purple-void:    #0d0007;
+  --fd-purple-night:   #100008;
+
+  --fd-yellow:         #ffd000;
+  --fd-yellow-bright:  #fff720;
+
+  --fd-pink:           #ff58cd;
+  --fd-red:            #ff0011;
+  --fd-green:          #00976c;
+
+  --fd-black:          #000000;
+  --fd-white:          #ffffff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-rubik);
+  --color-fd-yellow: var(--fd-yellow);
+  --color-fd-purple: var(--fd-purple-darkest);
+  --color-fd-ink: var(--fd-purple-ink);
+  --color-fd-abyss: var(--fd-purple-abyss);
+  --color-fd-void: var(--fd-purple-void);
+  --color-fd-night: var(--fd-purple-night);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
+  background: var(--fd-purple-night);
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--fd-purple-darkest); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--fd-purple-mid); }
+
+/* Sliders */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 208, 0, 0.15);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--fd-yellow);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(255, 208, 0, 0.25);
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--fd-yellow);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 0 2px rgba(255, 208, 0, 0.25);
+}
+
+/* Focus ring */
+button:focus-visible,
+input:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--fd-yellow);
+  outline-offset: 2px;
+}
+
+/* Card flip animation */
+.flip-card {
+  transition: transform 0.35s cubic-bezier(0.215, 0.61, 0.355, 1);
+  transform-origin: center;
+}
+.flip-out { transform: scaleX(0); }
+.flip-in { transform: scaleX(1); }
+
+/* Checkerboard for transparency preview (unused but handy) */
+.checker {
+  background-image:
+    linear-gradient(45deg, #1a1a1a 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1a1a 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1a1a 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-color: #262626;
 }
