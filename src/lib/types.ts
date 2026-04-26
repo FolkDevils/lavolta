@@ -67,9 +67,23 @@ export type FrontState = {
   textFill: ColorValue | null;
   /** Secondary text override, same shape as `textFill`. */
   subTextFill: ColorValue | null;
+  /** Phone number color override; falls back to primary text when null. */
+  phoneFill: ColorValue | null;
+  /** Email color override; falls back to primary text when null. */
+  emailFill: ColorValue | null;
   logo: LogoId;
   /** Multiplier on layout logo height (wordmark + icon). ~0.5–2.0. */
   logoScale: number;
+  /** Logo nudge in viewBox units; clamped to bleed box in render. */
+  logoOffsetX: number;
+  logoOffsetY: number;
+  /** Horizontal nudge applied to every text block (name, title, contact)
+   *  so the whole column slides together. */
+  textOffsetX: number;
+  /** Per-block vertical nudges (viewBox units). 0 = layout default. */
+  nameOffsetY: number;
+  titleOffsetY: number;
+  contactOffsetY: number;
   layout: FrontLayout;
   pat: PatternConfig;
 };
@@ -91,6 +105,9 @@ export type BackState = {
   logo: LogoId;
   /** Same semantics as `FrontState.logoScale`. */
   logoScale: number;
+  /** Logo nudge on the back face (viewBox units). */
+  logoOffsetX: number;
+  logoOffsetY: number;
   layout: BackLayout;
   /** QR foreground: palette id, #rrggbb, or null for "auto" (= primary text). */
   qrColor: ColorValue | null;

@@ -79,6 +79,30 @@ export function clampLogoScale(n: unknown): number {
 
 export const LOGO_SCALE_RANGE = { min: LOGO_SCALE_MIN, max: LOGO_SCALE_MAX, step: 0.05 } as const;
 
+/** Slider limits for position nudgers, in SVG viewBox units.
+ *  Generous enough to let designers rebalance a layout, tight
+ *  enough that you can't drag something completely off-card. */
+export const LOGO_OFFSET_RANGE = { x: 120, y: 100, step: 2 } as const;
+export const TEXT_OFFSET_RANGE = { x: 120, y: 60, step: 2 } as const;
+
+function clampNumber(n: unknown, limit: number): number {
+  const x = typeof n === "number" && Number.isFinite(n) ? n : 0;
+  return Math.min(limit, Math.max(-limit, x));
+}
+
+export function clampLogoOffsetX(n: unknown): number {
+  return clampNumber(n, LOGO_OFFSET_RANGE.x);
+}
+export function clampLogoOffsetY(n: unknown): number {
+  return clampNumber(n, LOGO_OFFSET_RANGE.y);
+}
+export function clampTextOffsetX(n: unknown): number {
+  return clampNumber(n, TEXT_OFFSET_RANGE.x);
+}
+export function clampTextOffsetY(n: unknown): number {
+  return clampNumber(n, TEXT_OFFSET_RANGE.y);
+}
+
 /* ── Print dimensions (Standard US business card) ──────────────────
  * Finished size: 3.5" × 2.0"
  * Bleed: 0.125" on all sides
@@ -289,8 +313,16 @@ export const DEFAULT_FRONT: FrontState = {
   color: "dark",
   textFill: null,
   subTextFill: null,
+  phoneFill: null,
+  emailFill: null,
   logo: "lg_full",
   logoScale: 1,
+  logoOffsetX: 0,
+  logoOffsetY: 0,
+  textOffsetX: 0,
+  nameOffsetY: 0,
+  titleOffsetY: 0,
+  contactOffsetY: 0,
   layout: "stack",
   pat: { ...DEFAULT_PATTERN },
 };
@@ -306,6 +338,8 @@ export const DEFAULT_BACK: BackState = {
   subTextFill: null,
   logo: "lg_full",
   logoScale: 1,
+  logoOffsetX: 0,
+  logoOffsetY: 0,
   layout: "two_qr",
   qrColor: "yellow",
   qrBody: "square",

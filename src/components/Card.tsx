@@ -112,6 +112,15 @@ type FrontProps = {
   guides?: boolean;
 };
 
+/** Clamp a 1-D position so a box of `size` stays fully inside [min, max].
+ *  If the box is larger than the window, center it instead of forcing an
+ *  inverted clamp (hi < lo). */
+function clampBox(pos: number, size: number, min: number, max: number): number {
+  const hi = max - size;
+  if (hi < min) return (min + hi) / 2;
+  return Math.min(hi, Math.max(min, pos));
+}
+
 export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFront(
   { fs, person, guides },
   ref,
@@ -119,9 +128,16 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
   const c = resolveCardPalette(fs.color);
   const textFill = fs.textFill == null ? c.text : resolveSolidHex(fs.textFill, c.text);
   const subFill = fs.subTextFill == null ? c.sub : resolveSolidHex(fs.subTextFill, c.sub);
+  /* Phone + Email default to whatever the primary text resolves to; picking a
+   * specific swatch overrides just that field and leaves the name/title alone. */
+  const phoneFill = fs.phoneFill == null ? textFill : resolveSolidHex(fs.phoneFill, textFill);
+  const emailFill = fs.emailFill == null ? textFill : resolveSolidHex(fs.emailFill, textFill);
   const lg = LOGOS.find((x) => x.id === fs.logo) ?? LOGOS[0];
 
-  /** Render the logo at (x, y) anchored by `align` */
+  /** Render the logo at (x, y) anchored by `align`, then translated by the
+   *  user's nudge and finally clamped so the image element's bounding box
+   *  never leaves the viewBox. This is the "auto-fit" behavior — users get
+   *  full freedom of the sliders, but nothing can scroll off the card. */
   const Logo = ({
     x,
     y,
@@ -135,17 +151,18 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
   }) => {
     if (!lg.src) return null;
     // PNG aspect: StaticLogoLrg is 500×206 → ratio ~2.427
-    // icon.svg: 512×512 → 1 — icon reads small at the same `h` as the wordmark,
-    // so we render it at 2× the layout height while keeping wordmark unchanged.
-    // Vertical: every layout passes `y` as the top of the *nominal* logo band (`h`).
-    // If we only stretched height downward, the icon would feel "pushed down" and
-    // crowd the type — center the taller icon in that same band instead.
+    // icon.svg: 512×512 → 1. The icon reads small at the same `h` as the
+    // wordmark, so we render it at 2× the layout height. Vertical: every
+    // layout passes `y` as the top of the *nominal* logo band; we center the
+    // taller icon in that same band so it doesn't crowd the type below.
     const scale = fs.logoScale ?? 1;
     const ratio = lg.kind === "icon" ? 1 : 500 / 206;
     const hi = (lg.kind === "icon" ? h * 2 : h) * scale;
     const w = hi * ratio;
-    const ox = align === "start" ? x : align === "middle" ? x - w / 2 : x - w;
-    const yDraw = y + h / 2 - hi / 2;
+    const baseOx = align === "start" ? x : align === "middle" ? x - w / 2 : x - w;
+    const baseOy = y + h / 2 - hi / 2;
+    const ox = clampBox(baseOx + (fs.logoOffsetX ?? 0), w, 0, VB_W);
+    const yDraw = clampBox(baseOy + (fs.logoOffsetY ?? 0), hi, 0, VB_H);
     return (
       <image
         href={lg.src}
@@ -157,6 +174,15 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
       />
     );
   };
+
+  /* Positioning:
+   *   - A single `textOffsetX` slides the whole text column left/right.
+   *   - Each block gets its own Y nudge so designers can tighten or loosen
+   *     individual vertical gaps without touching the horizontal layout. */
+  const tx = fs.textOffsetX ?? 0;
+  const nameTx = `translate(${tx}, ${fs.nameOffsetY ?? 0})`;
+  const titleTx = `translate(${tx}, ${fs.titleOffsetY ?? 0})`;
+  const contactTx = `translate(${tx}, ${fs.contactOffsetY ?? 0})`;
 
   /** Shared stack column (name, title, contact) that can anchor left or right,
    *  and stack either vertically distributed (full card height, like the classic
@@ -183,56 +209,59 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
      *   - label/value order flips with anchor so the label stays *outside*
      *     the value in the reading direction
      *   - 56-unit gutter keeps "EMAIL" clear of its value
-     *   - 26-unit row spacing gives 13pt type comfortable rhythm */
+     *   - 28-unit row spacing gives 13pt type comfortable rhythm */
     const labelX = isEnd ? xRight : xLeft;
     const valueX = isEnd ? xRight - 56 : xLeft + 56;
+    const rowGap = 28;
 
-    /* Y positions for each line. `distributed` keeps the original classic
-     * stack proportions; `centered` packs the block tight and centers it on
-     * the card so it balances visually with a mid-card logo.
+    /* Y positions for each line. `distributed` keeps the classic stack where
+     * name/title sit mid-card and contacts pin to the bottom. `centered` packs
+     * the whole block tight and centers it on the card so it balances
+     * visually with a mid-card logo.
      *
-     * Block geometry for `centered`:
-     *   - name baseline   → CY − 30
-     *   - title hanging   → name baseline + 10
-     *   - TEL row         → CY + 24
-     *   - EMAIL row       → TEL + 26
-     *   …which puts the block roughly 120→236 on a 360-unit card, nicely
-     *   centered on VB_H/2 = 180. */
+     * The user asked for more breathing room between the name/title group
+     * and the TEL/EMAIL group. We achieve that by:
+     *   - distributed → raising name/title from .52H → .46H
+     *   - centered     → pushing the contact group further below the title
+     *                    (CY + 36 instead of +24). */
     const CY = VB_H / 2;
     const nameY =
-      verticalMode === "centered" ? CY - 30 : CONTENT_Y + CONTENT_H * 0.52;
-    const titleY =
-      verticalMode === "centered" ? CY - 30 + 10 : CONTENT_Y + CONTENT_H * 0.52 + 18;
-    const contactTopY = verticalMode === "centered" ? CY + 24 : CONTENT_Y + CONTENT_H - 42;
-    const contactBottomY =
-      verticalMode === "centered" ? CY + 50 : CONTENT_Y + CONTENT_H - 16;
+      verticalMode === "centered" ? CY - 32 : CONTENT_Y + CONTENT_H * 0.46;
+    const titleY = nameY + 18;
+    const contactTopY =
+      verticalMode === "centered" ? CY + 36 : CONTENT_Y + CONTENT_H - 44;
+    const contactBottomY = contactTopY + rowGap;
 
     return (
       <>
-        <Txt
-          x={nameX}
-          y={nameY}
-          fontSize={34}
-          fontWeight={700}
-          fill={textFill}
-          textAnchor={textAnchor}
-          dominantBaseline="alphabetic"
-        >
-          {person.name}
-        </Txt>
-        <Txt
-          x={nameX}
-          y={titleY}
-          fontSize={11}
-          fontWeight={600}
-          fill={subFill}
-          letterSpacing="0.14em"
-          textAnchor={textAnchor}
-          dominantBaseline="hanging"
-        >
-          {person.title.toUpperCase()}
-        </Txt>
-        <g>
+        <g transform={nameTx}>
+          <Txt
+            x={nameX}
+            y={nameY}
+            fontSize={34}
+            fontWeight={700}
+            fill={textFill}
+            textAnchor={textAnchor}
+            dominantBaseline="alphabetic"
+          >
+            {person.name}
+          </Txt>
+        </g>
+        <g transform={titleTx}>
+          <Txt
+            x={nameX}
+            y={titleY}
+            fontSize={11}
+            fontWeight={600}
+            fill={subFill}
+            letterSpacing="0.14em"
+            textAnchor={textAnchor}
+            dominantBaseline="hanging"
+          >
+            {person.title.toUpperCase()}
+          </Txt>
+        </g>
+        <g transform={contactTx}>
           <Txt
             x={labelX}
             y={contactTopY}
@@ -248,7 +277,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
             x={valueX}
             y={contactTopY}
             fontSize={13}
-            fill={textFill}
+            fill={phoneFill}
             textAnchor={textAnchor}
           >
             {person.phone}
@@ -268,7 +297,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
             x={valueX}
             y={contactBottomY}
             fontSize={13}
-            fill={textFill}
+            fill={emailFill}
             textAnchor={textAnchor}
           >
             {person.email}
@@ -338,162 +367,186 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
     centered: (
       <>
         <Logo x={VB_W / 2} y={CONTENT_Y + 10} h={54} align="middle" />
-        <Txt
-          x={VB_W / 2}
-          y={VB_H / 2 + 6}
-          fontSize={28}
-          fontWeight={700}
-          fill={textFill}
-          textAnchor="middle"
-        >
-          {person.name}
-        </Txt>
-        <Txt
-          x={VB_W / 2}
-          y={VB_H / 2 + 28}
-          fontSize={10}
-          fontWeight={600}
-          fill={subFill}
-          letterSpacing="0.16em"
-          textAnchor="middle"
-        >
-          {person.title.toUpperCase()}
-        </Txt>
-        <Txt
-          x={VB_W / 2 - 12}
-          y={CONTENT_Y + CONTENT_H - 20}
-          fontSize={12}
-          fill={textFill}
-          textAnchor="end"
-        >
-          {person.phone}
-        </Txt>
-        <Txt
-          x={VB_W / 2 + 12}
-          y={CONTENT_Y + CONTENT_H - 20}
-          fontSize={12}
-          fill={textFill}
-        >
-          {person.email}
-        </Txt>
+        <g transform={nameTx}>
+          <Txt
+            x={VB_W / 2}
+            y={VB_H / 2 + 6}
+            fontSize={28}
+            fontWeight={700}
+            fill={textFill}
+            textAnchor="middle"
+          >
+            {person.name}
+          </Txt>
+        </g>
+        <g transform={titleTx}>
+          <Txt
+            x={VB_W / 2}
+            y={VB_H / 2 + 28}
+            fontSize={10}
+            fontWeight={600}
+            fill={subFill}
+            letterSpacing="0.16em"
+            textAnchor="middle"
+          >
+            {person.title.toUpperCase()}
+          </Txt>
+        </g>
+        <g transform={contactTx}>
+          <Txt
+            x={VB_W / 2 - 12}
+            y={CONTENT_Y + CONTENT_H - 20}
+            fontSize={12}
+            fill={phoneFill}
+            textAnchor="end"
+          >
+            {person.phone}
+          </Txt>
+          <Txt
+            x={VB_W / 2 + 12}
+            y={CONTENT_Y + CONTENT_H - 20}
+            fontSize={12}
+            fill={emailFill}
+          >
+            {person.email}
+          </Txt>
+        </g>
       </>
     ),
 
     bold: (
       <>
         <Logo x={CONTENT_X} y={CONTENT_Y} h={46} />
-        <Txt
-          x={CONTENT_X}
-          y={CONTENT_Y + CONTENT_H * 0.58}
-          fontSize={56}
-          fontWeight={900}
-          fill={textFill}
-          letterSpacing="-0.02em"
-        >
-          {person.name}
-        </Txt>
-        <Txt
-          x={CONTENT_X}
-          y={CONTENT_Y + CONTENT_H - 34}
-          fontSize={10}
-          fontWeight={700}
-          fill={subFill}
-          letterSpacing="0.14em"
-        >
-          {person.title.toUpperCase()}
-        </Txt>
-        <Txt
-          x={CONTENT_X}
-          y={CONTENT_Y + CONTENT_H - 12}
-          fontSize={12}
-          fill={textFill}
-        >
-          {person.phone}
-        </Txt>
-        <Txt
-          x={CONTENT_X + CONTENT_W * 0.5}
-          y={CONTENT_Y + CONTENT_H - 12}
-          fontSize={12}
-          fill={textFill}
-        >
-          {person.email}
-        </Txt>
+        <g transform={nameTx}>
+          <Txt
+            x={CONTENT_X}
+            y={CONTENT_Y + CONTENT_H * 0.58}
+            fontSize={56}
+            fontWeight={900}
+            fill={textFill}
+            letterSpacing="-0.02em"
+          >
+            {person.name}
+          </Txt>
+        </g>
+        <g transform={titleTx}>
+          <Txt
+            x={CONTENT_X}
+            y={CONTENT_Y + CONTENT_H - 34}
+            fontSize={10}
+            fontWeight={700}
+            fill={subFill}
+            letterSpacing="0.14em"
+          >
+            {person.title.toUpperCase()}
+          </Txt>
+        </g>
+        <g transform={contactTx}>
+          <Txt
+            x={CONTENT_X}
+            y={CONTENT_Y + CONTENT_H - 12}
+            fontSize={12}
+            fill={phoneFill}
+          >
+            {person.phone}
+          </Txt>
+          <Txt
+            x={CONTENT_X + CONTENT_W * 0.5}
+            y={CONTENT_Y + CONTENT_H - 12}
+            fontSize={12}
+            fill={emailFill}
+          >
+            {person.email}
+          </Txt>
+        </g>
       </>
     ),
 
     text_left: (
       <>
-        <Txt
-          x={CONTENT_X}
-          y={CONTENT_Y + 28}
-          fontSize={28}
-          fontWeight={700}
-          fill={textFill}
-        >
-          {person.name}
-        </Txt>
+        <g transform={nameTx}>
+          <Txt
+            x={CONTENT_X}
+            y={CONTENT_Y + 28}
+            fontSize={28}
+            fontWeight={700}
+            fill={textFill}
+          >
+            {person.name}
+          </Txt>
+        </g>
         <Logo x={CONTENT_X + CONTENT_W} y={CONTENT_Y} h={48} align="end" />
-        <Txt
-          x={CONTENT_X}
-          y={CONTENT_Y + CONTENT_H - 20}
-          fontSize={10}
-          fontWeight={700}
-          fill={subFill}
-          letterSpacing="0.14em"
-        >
-          {person.title.toUpperCase()}
-        </Txt>
-        <Txt
-          x={CONTENT_X + CONTENT_W}
-          y={CONTENT_Y + CONTENT_H - 32}
-          fontSize={12}
-          fill={textFill}
-          textAnchor="end"
-        >
-          {person.phone}
-        </Txt>
-        <Txt
-          x={CONTENT_X + CONTENT_W}
-          y={CONTENT_Y + CONTENT_H - 14}
-          fontSize={12}
-          fill={textFill}
-          textAnchor="end"
-        >
-          {person.email}
-        </Txt>
+        <g transform={titleTx}>
+          <Txt
+            x={CONTENT_X}
+            y={CONTENT_Y + CONTENT_H - 20}
+            fontSize={10}
+            fontWeight={700}
+            fill={subFill}
+            letterSpacing="0.14em"
+          >
+            {person.title.toUpperCase()}
+          </Txt>
+        </g>
+        <g transform={contactTx}>
+          <Txt
+            x={CONTENT_X + CONTENT_W}
+            y={CONTENT_Y + CONTENT_H - 32}
+            fontSize={12}
+            fill={phoneFill}
+            textAnchor="end"
+          >
+            {person.phone}
+          </Txt>
+          <Txt
+            x={CONTENT_X + CONTENT_W}
+            y={CONTENT_Y + CONTENT_H - 14}
+            fontSize={12}
+            fill={emailFill}
+            textAnchor="end"
+          >
+            {person.email}
+          </Txt>
+        </g>
       </>
     ),
 
     logo_left: (
       <>
         <Logo x={CONTENT_X} y={CONTENT_Y} h={48} align="start" />
-        <Txt
-          x={CONTENT_X + CONTENT_W}
-          y={CONTENT_Y + 28}
-          fontSize={28}
-          fontWeight={700}
-          fill={textFill}
-          textAnchor="end"
-        >
-          {person.name}
-        </Txt>
-        <Txt
-          x={CONTENT_X + CONTENT_W}
-          y={CONTENT_Y + CONTENT_H - 20}
-          fontSize={10}
-          fontWeight={700}
-          fill={subFill}
-          letterSpacing="0.14em"
-          textAnchor="end"
-        >
-          {person.title.toUpperCase()}
-        </Txt>
-        <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 32} fontSize={12} fill={textFill}>
-          {person.phone}
-        </Txt>
-        <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 14} fontSize={12} fill={textFill}>
-          {person.email}
-        </Txt>
+        <g transform={nameTx}>
+          <Txt
+            x={CONTENT_X + CONTENT_W}
+            y={CONTENT_Y + 28}
+            fontSize={28}
+            fontWeight={700}
+            fill={textFill}
+            textAnchor="end"
+          >
+            {person.name}
+          </Txt>
+        </g>
+        <g transform={titleTx}>
+          <Txt
+            x={CONTENT_X + CONTENT_W}
+            y={CONTENT_Y + CONTENT_H - 20}
+            fontSize={10}
+            fontWeight={700}
+            fill={subFill}
+            letterSpacing="0.14em"
+            textAnchor="end"
+          >
+            {person.title.toUpperCase()}
+          </Txt>
+        </g>
+        <g transform={contactTx}>
+          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 32} fontSize={12} fill={phoneFill}>
+            {person.phone}
+          </Txt>
+          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 14} fontSize={12} fill={emailFill}>
+            {person.email}
+          </Txt>
+        </g>
       </>
     ),
   };
@@ -585,8 +638,10 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
     const ratio = lg.kind === "icon" ? 1 : 500 / 206;
     const hi = (lg.kind === "icon" ? h * 2 : h) * scale;
     const w = hi * ratio;
-    const ox = align === "start" ? x : align === "middle" ? x - w / 2 : x - w;
-    const yDraw = y + h / 2 - hi / 2;
+    const baseOx = align === "start" ? x : align === "middle" ? x - w / 2 : x - w;
+    const baseOy = y + h / 2 - hi / 2;
+    const ox = clampBox(baseOx + (bs.logoOffsetX ?? 0), w, 0, VB_W);
+    const yDraw = clampBox(baseOy + (bs.logoOffsetY ?? 0), hi, 0, VB_H);
     return (
       <image
         href={lg.src}

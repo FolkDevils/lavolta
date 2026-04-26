@@ -4,7 +4,11 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BACK_LAYOUTS,
+  clampLogoOffsetX,
+  clampLogoOffsetY,
   clampLogoScale,
+  clampTextOffsetX,
+  clampTextOffsetY,
   COLORS,
   DEFAULT_BACK,
   DEFAULT_FRONT,
@@ -12,6 +16,7 @@ import {
   DEFAULT_QR_LINKS,
   FD_SOLID_PALETTE,
   FRONT_LAYOUTS,
+  LOGO_OFFSET_RANGE,
   LOGO_SCALE_RANGE,
   LOGOS,
   normalizeColorValue,
@@ -24,6 +29,7 @@ import {
   QR_EYE_OPTIONS,
   qrStyleToDesignFields,
   STORAGE_KEY,
+  TEXT_OFFSET_RANGE,
 } from "@/lib/constants";
 import { resolveCardPalette, resolveSolidHex } from "@/lib/color";
 import { exportPdf, exportPng, exportSvg, EXPORT_SPEC } from "@/lib/export";
@@ -94,9 +100,17 @@ export default function Editor() {
             layout: normalizeFrontLayout(saved.front.layout),
             logo: normalizeLogoId(saved.front.logo),
             logoScale: clampLogoScale(saved.front.logoScale),
+            logoOffsetX: clampLogoOffsetX(saved.front.logoOffsetX),
+            logoOffsetY: clampLogoOffsetY(saved.front.logoOffsetY),
+            textOffsetX: clampTextOffsetX(saved.front.textOffsetX),
+            nameOffsetY: clampTextOffsetY(saved.front.nameOffsetY),
+            titleOffsetY: clampTextOffsetY(saved.front.titleOffsetY),
+            contactOffsetY: clampTextOffsetY(saved.front.contactOffsetY),
             color: normalizeColorValue(saved.front.color, "dark"),
             textFill: saved.front.textFill ?? null,
             subTextFill: saved.front.subTextFill ?? null,
+            phoneFill: saved.front.phoneFill ?? null,
+            emailFill: saved.front.emailFill ?? null,
           });
         }
         if (saved.back) {
@@ -122,6 +136,8 @@ export default function Editor() {
             ...saved.back,
             logo: migratedBackLogo,
             logoScale: clampLogoScale(saved.back.logoScale),
+            logoOffsetX: clampLogoOffsetX(saved.back.logoOffsetX),
+            logoOffsetY: clampLogoOffsetY(saved.back.logoOffsetY),
             color: normalizeColorValue(saved.back.color, "dark"),
             qrColor:
               saved.back.qrColor === null
@@ -414,6 +430,13 @@ export default function Editor() {
                   onResetBoth={() =>
                     setFront((f) => ({ ...f, textFill: null, subTextFill: null }))
                   }
+                  phoneFill={front.phoneFill}
+                  emailFill={front.emailFill}
+                  onPhoneFill={(v) => upF("phoneFill", v)}
+                  onEmailFill={(v) => upF("emailFill", v)}
+                  onResetContact={() =>
+                    setFront((f) => ({ ...f, phoneFill: null, emailFill: null }))
+                  }
                 />
 
                 <Divider />
@@ -421,8 +444,15 @@ export default function Editor() {
                 <LogoPickerBlock
                   logo={front.logo}
                   logoScale={front.logoScale}
+                  logoOffsetX={front.logoOffsetX}
+                  logoOffsetY={front.logoOffsetY}
                   onLogo={(id) => upF("logo", id)}
                   onScale={(v) => upF("logoScale", v)}
+                  onOffsetX={(v) => upF("logoOffsetX", v)}
+                  onOffsetY={(v) => upF("logoOffsetY", v)}
+                  onResetPosition={() =>
+                    setFront((f) => ({ ...f, logoOffsetX: 0, logoOffsetY: 0 }))
+                  }
                 />
 
                 <Divider />
@@ -431,6 +461,13 @@ export default function Editor() {
                   <SectionLabel>Layout</SectionLabel>
                   <ChipRow options={FRONT_LAYOUTS} value={front.layout} onChange={(v) => upF("layout", v)} />
                 </div>
+
+                <Divider />
+
+                <PositioningPanel
+                  front={front}
+                  onChange={(patch) => setFront((f) => ({ ...f, ...patch }))}
+                />
 
                 <Divider />
 
@@ -475,8 +512,15 @@ export default function Editor() {
                 <LogoPickerBlock
                   logo={back.logo}
                   logoScale={back.logoScale}
+                  logoOffsetX={back.logoOffsetX}
+                  logoOffsetY={back.logoOffsetY}
                   onLogo={(id) => upB("logo", id)}
                   onScale={(v) => upB("logoScale", v)}
+                  onOffsetX={(v) => upB("logoOffsetX", v)}
+                  onOffsetY={(v) => upB("logoOffsetY", v)}
+                  onResetPosition={() =>
+                    setBack((b) => ({ ...b, logoOffsetX: 0, logoOffsetY: 0 }))
+                  }
                 />
 
                 <Divider />
@@ -562,14 +606,25 @@ export default function Editor() {
 function LogoPickerBlock({
   logo,
   logoScale,
+  logoOffsetX,
+  logoOffsetY,
   onLogo,
   onScale,
+  onOffsetX,
+  onOffsetY,
+  onResetPosition,
 }: {
   logo: LogoId;
   logoScale: number;
+  logoOffsetX: number;
+  logoOffsetY: number;
   onLogo: (id: LogoId) => void;
   onScale: (n: number) => void;
+  onOffsetX: (n: number) => void;
+  onOffsetY: (n: number) => void;
+  onResetPosition: () => void;
 }) {
+  const hasOffset = logoOffsetX !== 0 || logoOffsetY !== 0;
   return (
     <div>
       <SectionLabel>Logo</SectionLabel>
@@ -617,17 +672,154 @@ function LogoPickerBlock({
           );
         })}
       </div>
-      <div className="mt-2">
-        <FDRange
-          label="Logo scale"
-          min={LOGO_SCALE_RANGE.min}
-          max={LOGO_SCALE_RANGE.max}
-          step={LOGO_SCALE_RANGE.step}
-          value={logoScale}
-          onChange={onScale}
-          formatLabel={(v) => `×${v.toFixed(2)}`}
-        />
-      </div>
+      {logo !== "none" ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <FDRange
+            label="Logo scale"
+            min={LOGO_SCALE_RANGE.min}
+            max={LOGO_SCALE_RANGE.max}
+            step={LOGO_SCALE_RANGE.step}
+            value={logoScale}
+            onChange={onScale}
+            formatLabel={(v) => `×${v.toFixed(2)}`}
+          />
+          <FDRange
+            label="Logo · X"
+            min={-LOGO_OFFSET_RANGE.x}
+            max={LOGO_OFFSET_RANGE.x}
+            step={LOGO_OFFSET_RANGE.step}
+            value={logoOffsetX}
+            onChange={onOffsetX}
+            formatLabel={formatSigned}
+          />
+          <FDRange
+            label="Logo · Y"
+            min={-LOGO_OFFSET_RANGE.y}
+            max={LOGO_OFFSET_RANGE.y}
+            step={LOGO_OFFSET_RANGE.step}
+            value={logoOffsetY}
+            onChange={onOffsetY}
+            formatLabel={formatSigned}
+          />
+          {hasOffset ? (
+            <button
+              type="button"
+              onClick={onResetPosition}
+              className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+            >
+              Reset logo position
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Compact "+20 / −15" slider label. */
+function formatSigned(v: number): string {
+  const n = Math.round(v);
+  if (n === 0) return "0";
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+/** Text-positioning controls. One shared X slider slides the whole column;
+ *  individual Y sliders per block give designers fine control of the gaps
+ *  between name, title, and the phone+email group. Collapsible to keep the
+ *  default panel compact. */
+function PositioningPanel({
+  front,
+  onChange,
+}: {
+  front: FrontState;
+  onChange: (patch: Partial<FrontState>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dirty =
+    front.textOffsetX !== 0 ||
+    front.nameOffsetY !== 0 ||
+    front.titleOffsetY !== 0 ||
+    front.contactOffsetY !== 0;
+
+  const reset = () =>
+    onChange({
+      textOffsetX: 0,
+      nameOffsetY: 0,
+      titleOffsetY: 0,
+      contactOffsetY: 0,
+    });
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between group"
+        aria-expanded={open}
+      >
+        <SectionLabel mb={0}>
+          Text position{dirty ? <span className="text-[#ffd000]"> · edited</span> : null}
+        </SectionLabel>
+        <span
+          className={`text-[11px] text-[rgba(255,208,0,0.45)] group-hover:text-[#ffd000] transition ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        >
+          ▾
+        </span>
+      </button>
+
+      {open ? (
+        <div className="mt-3 flex flex-col gap-3">
+          <FDRange
+            label="Column · X (shifts all text)"
+            min={-TEXT_OFFSET_RANGE.x}
+            max={TEXT_OFFSET_RANGE.x}
+            step={TEXT_OFFSET_RANGE.step}
+            value={front.textOffsetX}
+            onChange={(v) => onChange({ textOffsetX: v })}
+            formatLabel={formatSigned}
+          />
+          <div className="h-px bg-[rgba(255,208,0,0.08)]" />
+          <FDRange
+            label="Name · Y"
+            min={-TEXT_OFFSET_RANGE.y}
+            max={TEXT_OFFSET_RANGE.y}
+            step={TEXT_OFFSET_RANGE.step}
+            value={front.nameOffsetY}
+            onChange={(v) => onChange({ nameOffsetY: v })}
+            formatLabel={formatSigned}
+          />
+          <FDRange
+            label="Title · Y"
+            min={-TEXT_OFFSET_RANGE.y}
+            max={TEXT_OFFSET_RANGE.y}
+            step={TEXT_OFFSET_RANGE.step}
+            value={front.titleOffsetY}
+            onChange={(v) => onChange({ titleOffsetY: v })}
+            formatLabel={formatSigned}
+          />
+          <FDRange
+            label="Phone + Email · Y"
+            min={-TEXT_OFFSET_RANGE.y}
+            max={TEXT_OFFSET_RANGE.y}
+            step={TEXT_OFFSET_RANGE.step}
+            value={front.contactOffsetY}
+            onChange={(v) => onChange({ contactOffsetY: v })}
+            formatLabel={formatSigned}
+          />
+          {dirty ? (
+            <button
+              type="button"
+              onClick={reset}
+              className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+            >
+              Reset all text positions
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -644,6 +836,12 @@ function TextColorBlock({
   onTextFill,
   onSubTextFill,
   onResetBoth,
+  /* Front-face only: independent phone + email overrides. */
+  phoneFill,
+  emailFill,
+  onPhoneFill,
+  onEmailFill,
+  onResetContact,
 }: {
   bgValue: string;
   textFill: string | null;
@@ -651,11 +849,21 @@ function TextColorBlock({
   onTextFill: (v: string | null) => void;
   onSubTextFill: (v: string | null) => void;
   onResetBoth: () => void;
+  phoneFill?: string | null;
+  emailFill?: string | null;
+  onPhoneFill?: (v: string | null) => void;
+  onEmailFill?: (v: string | null) => void;
+  onResetContact?: () => void;
 }) {
   const bgPal = resolveCardPalette(bgValue);
   const primaryResolved = resolveSolidHex(textFill, bgPal.text);
   const subResolved = resolveSolidHex(subTextFill, bgPal.text);
-  const hasCustom = textFill != null || subTextFill != null;
+  const phoneResolved = resolveSolidHex(phoneFill ?? null, primaryResolved);
+  const emailResolved = resolveSolidHex(emailFill ?? null, primaryResolved);
+  const hasCustomPrimary = textFill != null || subTextFill != null;
+  const hasCustomContact =
+    onPhoneFill != null && (phoneFill != null || emailFill != null);
+  const showContact = onPhoneFill != null && onEmailFill != null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -679,14 +887,48 @@ function TextColorBlock({
           nullable={{ label: "Auto" }}
         />
       </div>
-      {hasCustom ? (
+      {hasCustomPrimary ? (
         <button
           type="button"
           onClick={onResetBoth}
           className="text-[9px] uppercase tracking-[0.1em] text-left text-[rgba(255,208,0,0.4)] hover:text-[#ffd000]"
         >
-          Reset both to background palette
+          Reset primary + secondary
         </button>
+      ) : null}
+
+      {showContact ? (
+        <>
+          <div className="border-t border-[rgba(255,208,0,0.08)] pt-3">
+            <SectionLabel>Phone</SectionLabel>
+            <ColorSelect
+              value={phoneFill ?? null}
+              onChange={onPhoneFill!}
+              options={SOLID_PALETTE_OPTIONS}
+              resolvedHex={phoneResolved}
+              nullable={{ label: "Auto" }}
+            />
+          </div>
+          <div>
+            <SectionLabel>Email</SectionLabel>
+            <ColorSelect
+              value={emailFill ?? null}
+              onChange={onEmailFill!}
+              options={SOLID_PALETTE_OPTIONS}
+              resolvedHex={emailResolved}
+              nullable={{ label: "Auto" }}
+            />
+          </div>
+          {hasCustomContact && onResetContact ? (
+            <button
+              type="button"
+              onClick={onResetContact}
+              className="text-[9px] uppercase tracking-[0.1em] text-left text-[rgba(255,208,0,0.4)] hover:text-[#ffd000]"
+            >
+              Reset phone + email to primary
+            </button>
+          ) : null}
+        </>
       ) : null}
     </div>
   );
