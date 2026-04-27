@@ -696,14 +696,14 @@ export const DEFAULT_PEOPLE: Person[] = [
   {
     id: 2,
     name: "Andrew Eaton",
-    title: "DESIGN LEAD / FOUNDER",
+    title: "FOUNDER",
     phone: "(201) 881-6941",
     email: "andrew@folkdevils.io",
   },
   {
     id: 3,
     name: "Avi Cohen",
-    title: "STRATEGY LEAD / FOUNDER",
+    title: "FOUNDER",
     phone: "(516) 864-1377",
     email: "avi@folkdevils.io",
   },
