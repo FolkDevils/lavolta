@@ -195,39 +195,44 @@ export const FRONT_FONT_NAME_BASE: Record<FrontLayout, number> = {
   logo_left: 28,
 };
 
+/* Base font sizes are expressed in SVG viewBox units (160/inch).
+ * Convert to print points with × 72/160 = 0.45. We target a ≥ 6.5 pt floor
+ * on every live-text field so names, titles, and contact values all stay
+ * legible at 300 DPI on a 3.5" × 2" card. */
+
 export const FRONT_FONT_TITLE_BASE: Record<FrontLayout, number> = {
-  stack: 11,
-  stack_logo_left: 11,
-  stack_logo_right: 11,
-  centered: 10,
-  bold: 10,
-  text_left: 10,
-  logo_left: 10,
+  stack: 15, // ~6.75 pt
+  stack_logo_left: 15,
+  stack_logo_right: 15,
+  centered: 14, // ~6.30 pt
+  bold: 14,
+  text_left: 14,
+  logo_left: 14,
 };
 
 export const FRONT_FONT_CONTACT_LABEL_BASE: Record<FrontLayout, number> = {
-  stack: 9,
-  stack_logo_left: 9,
-  stack_logo_right: 9,
-  centered: 9,
-  bold: 9,
-  text_left: 9,
-  logo_left: 9,
+  stack: 14, // ~6.30 pt
+  stack_logo_left: 14,
+  stack_logo_right: 14,
+  centered: 14,
+  bold: 14,
+  text_left: 14,
+  logo_left: 14,
 };
 
 export const FRONT_FONT_CONTACT_VALUE_BASE: Record<FrontLayout, number> = {
-  stack: 13,
-  stack_logo_left: 13,
-  stack_logo_right: 13,
-  centered: 12,
-  bold: 12,
-  text_left: 12,
-  logo_left: 12,
+  stack: 16, // ~7.20 pt
+  stack_logo_left: 16,
+  stack_logo_right: 16,
+  centered: 15, // ~6.75 pt
+  bold: 15,
+  text_left: 15,
+  logo_left: 15,
 };
 
 export function frontFontNamePx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    8,
+    15, // ≈ 6.75 pt floor — names shouldn't ever print smaller than this
     120,
     Math.round(FRONT_FONT_NAME_BASE[layout] * clampFontScale(scale)),
   );
@@ -235,7 +240,7 @@ export function frontFontNamePx(layout: FrontLayout, scale: unknown): number {
 
 export function frontFontTitlePx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    5,
+    13, // ≈ 5.85 pt floor — tight minimum for ALL CAPS tracked titles
     32,
     Math.round(FRONT_FONT_TITLE_BASE[layout] * clampFontScale(scale)),
   );
@@ -243,27 +248,27 @@ export function frontFontTitlePx(layout: FrontLayout, scale: unknown): number {
 
 export function frontFontContactLabelPx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    5,
-    20,
+    13, // ≈ 5.85 pt floor
+    22,
     Math.round(FRONT_FONT_CONTACT_LABEL_BASE[layout] * clampFontScale(scale)),
   );
 }
 
 export function frontFontContactValuePx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    7,
-    28,
+    14, // ≈ 6.30 pt floor — phone/email must stay dial-able
+    30,
     Math.round(FRONT_FONT_CONTACT_VALUE_BASE[layout] * clampFontScale(scale)),
   );
 }
 
-export const BACK_FONT_CAPTION_DEFAULT = 10;
-export const BACK_FONT_DISPLAY_DEFAULT = 54;
-export const BACK_FONT_MINIMAL_DEFAULT = 16;
+export const BACK_FONT_CAPTION_DEFAULT = 15; // ~6.75 pt (up from 4.50 pt)
+export const BACK_FONT_DISPLAY_DEFAULT = 54; // ~24.3 pt — already great
+export const BACK_FONT_MINIMAL_DEFAULT = 18; // ~8.10 pt (up from 7.20 pt)
 
 export function clampFontQrCaption(n: unknown): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_CAPTION_DEFAULT;
-  return Math.round(Math.min(22, Math.max(6, x)));
+  return Math.round(Math.min(24, Math.max(13, x))); // 5.85–10.8 pt
 }
 
 export function clampFontBackDisplay(n: unknown): number {
@@ -273,7 +278,7 @@ export function clampFontBackDisplay(n: unknown): number {
 
 export function clampFontMinimalLink(n: unknown): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_MINIMAL_DEFAULT;
-  return Math.round(Math.min(32, Math.max(9, x)));
+  return Math.round(Math.min(34, Math.max(14, x))); // 6.30–15.3 pt
 }
 
 /* Pixel dimensions at 300 DPI for raster export */

@@ -25,17 +25,17 @@ type ChipRowProps<T extends string> = {
 
 export function ChipRow<T extends string>({ options, value, onChange }: ChipRowProps<T>) {
   return (
-    <div className="flex gap-1 flex-wrap">
+    <div className="flex gap-1.5 flex-wrap">
       {options.map((o) => {
         const sel = o.id === value;
         return (
           <button
             key={o.id}
             onClick={() => onChange(o.id)}
-            className={`px-2.5 py-1.5 rounded text-[10px] uppercase tracking-[0.06em] transition
+            className={`px-3 py-2 rounded-md text-[10px] uppercase tracking-[0.06em] min-h-[34px] transition
               ${sel
-                ? "bg-[#ffd000] text-[#440031] font-bold"
-                : "bg-[rgba(255,208,0,0.07)] text-[rgba(255,208,0,0.55)] hover:text-[rgba(255,208,0,0.85)]"}`}
+                ? "bg-[#ffd000] text-[#440031] font-bold shadow-[0_0_0_1px_rgba(255,208,0,0.8)]"
+                : "bg-[rgba(255,208,0,0.05)] border border-[rgba(255,208,0,0.1)] text-[rgba(255,208,0,0.65)] hover:text-[#ffd000] hover:border-[rgba(255,208,0,0.35)]"}`}
           >
             {o.name}
           </button>
@@ -70,10 +70,12 @@ export function FDRange({
   disabled = false,
 }: FDRangeProps) {
   return (
-    <div className={`flex flex-col gap-1.5 ${disabled ? "opacity-45" : ""}`}>
-      <div className="flex justify-between">
-        <span className="text-[9px] uppercase tracking-[0.09em] text-[rgba(255,208,0,0.5)]">{label}</span>
-        <span className="text-[9px] font-bold text-[#ffd000]">
+    <div className={`flex flex-col gap-1 ${disabled ? "opacity-45" : ""}`}>
+      <div className="flex justify-between items-baseline gap-2">
+        <span className="text-[10px] uppercase tracking-[0.08em] text-[rgba(255,208,0,0.55)] truncate">
+          {label}
+        </span>
+        <span className="text-[10px] font-bold text-[#ffd000] tabular-nums whitespace-nowrap">
           {formatLabel ? formatLabel(value) : `${value}${unit}`}
         </span>
       </div>
@@ -85,7 +87,7 @@ export function FDRange({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className={disabled ? "cursor-not-allowed" : undefined}
+        className={`fd-range ${disabled ? "cursor-not-allowed" : ""}`}
       />
     </div>
   );

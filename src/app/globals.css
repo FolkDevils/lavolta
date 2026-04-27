@@ -50,35 +50,76 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--fd-purple-darkest); border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--fd-purple-mid); }
 
-/* Sliders */
+/* Sliders — touch friendly with a tall invisible hit area so fingers
+ * can grab the thumb comfortably on mobile without shrinking the
+ * visual track. */
 input[type=range] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 208, 0, 0.15);
+  background: transparent;
   outline: none;
   cursor: pointer;
+  padding: 10px 0;          /* bigger hit area */
+  margin: 0;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 208, 0, 0.16);
+  border: 1px solid rgba(255, 208, 0, 0.08);
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   background: var(--fd-yellow);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 0 2px rgba(255, 208, 0, 0.25);
+  margin-top: -8px;           /* center the thumb on a 4px track */
+  box-shadow:
+    0 0 0 2px rgba(255, 208, 0, 0.22),
+    0 1px 4px rgba(0, 0, 0, 0.55);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+input[type=range]:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow:
+    0 0 0 3px rgba(255, 208, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+input[type=range]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 208, 0, 0.16);
+  border: 1px solid rgba(255, 208, 0, 0.08);
 }
 input[type=range]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   background: var(--fd-yellow);
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  box-shadow: 0 0 0 2px rgba(255, 208, 0, 0.25);
+  box-shadow:
+    0 0 0 2px rgba(255, 208, 0, 0.22),
+    0 1px 4px rgba(0, 0, 0, 0.55);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+input[type=range]:active::-moz-range-thumb {
+  transform: scale(1.15);
+  box-shadow:
+    0 0 0 3px rgba(255, 208, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+input[type=range]:disabled {
+  cursor: not-allowed;
+}
+input[type=range]:disabled::-webkit-slider-thumb { opacity: 0.45; }
+input[type=range]:disabled::-moz-range-thumb { opacity: 0.45; }
 
 /* Focus ring */
 button:focus-visible,
@@ -94,7 +135,32 @@ input:focus-visible,
   transform-origin: center;
 }
 .flip-out { transform: scaleX(0); }
-.flip-in { transform: scaleX(1); }
+.flip-in  { transform: scaleX(1); }
+
+/* Slide-in drawer (People list on tablet/mobile) */
+.fd-drawer {
+  transform: translateX(-100%);
+  transition: transform 0.25s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+.fd-drawer.open { transform: translateX(0); }
+
+.fd-drawer-backdrop {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.fd-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Hide scrollbars on horizontally scrolling chip rows */
+.fd-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.fd-scroll-x::-webkit-scrollbar { display: none; }
 
 /* Checkerboard for transparency preview (unused but handy) */
 .checker {
