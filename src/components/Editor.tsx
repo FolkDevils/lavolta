@@ -5,6 +5,7 @@ import { EXPORT_SPEC } from "@/lib/export";
 import { useEditorState } from "@/hooks/useEditorState";
 import { CardBack, CardFront } from "./card";
 import { ExportMenu } from "./controls/ExportMenu";
+import { PersonSettingsTransfer } from "./controls/PersonSettingsTransfer";
 import { FrontPanel } from "./controls/FrontPanel";
 import { BackPanel } from "./controls/BackPanel";
 import { PeopleList } from "./controls/PeopleList";
@@ -23,6 +24,8 @@ export default function Editor() {
     updateBack, patchSelectedBack,
     addPerson, updatePerson, deletePerson,
     handleExport, clearSavedData,
+    exportSelectedPersonSettings,
+    importPersonSettingsFromJson,
   } = useEditorState();
 
   /* ── UI-only state ──────────────────────────────────────── */
@@ -148,6 +151,14 @@ export default function Editor() {
               onAdd={addPerson}
               onUpdate={updatePerson}
               onDelete={deletePerson}
+            />
+          </div>
+
+          <div className="pt-3 border-t border-[rgba(255,208,0,0.08)]">
+            <PersonSettingsTransfer
+              personName={person.name}
+              onDownload={exportSelectedPersonSettings}
+              onImportJson={importPersonSettingsFromJson}
             />
           </div>
 

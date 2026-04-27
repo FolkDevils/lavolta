@@ -7,9 +7,16 @@ import {
   DEFAULT_PEOPLE,
   defaultBackForPerson,
   defaultFrontForPerson,
+  migrateRawBack,
+  migrateRawFront,
   normalizeFrontFontScalesForLayout,
   STORAGE_KEY,
 } from "@/lib/constants";
+import {
+  buildPersonSettingsPayload,
+  parsePersonSettingsFile,
+  personSettingsDownloadBasename,
+} from "@/lib/personSettingsFile";
 import type { BackState, FrontState, Person } from "@/lib/types";
 import { useExport } from "./useExport";
 
@@ -224,6 +231,68 @@ export function useEditorState() {
     front.fontScaleContactValue,
   ]);
 
+  /* ── Per-person settings file (JSON download / import) ─────────── */
+  const exportSelectedPersonSettings = useCallback(() => {
+    const id = selectedId ?? people[0]?.id;
+    if (id == null) return;
+    const p = people.find((x) => x.id === id);
+    if (!p) return;
+    const f = frontByPersonId[id] ?? defaultFrontForPerson(id);
+    const b = backByPersonId[id] ?? defaultBackForPerson(id);
+    const payload = buildPersonSettingsPayload(p, f, b);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${personSettingsDownloadBasename(p.name)}-fd-card-settings.json`;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [selectedId, people, frontByPersonId, backByPersonId]);
+
+  const importPersonSettingsFromJson = useCallback(
+    (jsonText: string): { ok: true } | { ok: false; error: string } => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(jsonText) as unknown;
+      } catch {
+        return { ok: false, error: "Invalid JSON — could not parse." };
+      }
+      const file = parsePersonSettingsFile(parsed);
+      if (!file.ok) return file;
+      const id = selectedId ?? people[0]?.id ?? 1;
+      if (!people.some((p) => p.id === id)) {
+        return { ok: false, error: "No person selected to apply settings to." };
+      }
+      const targetName = people.find((p) => p.id === id)?.name ?? "this person";
+      if (
+        !window.confirm(
+          `Replace all settings for “${targetName}” (contact info, front card, back card) with this file?`,
+        )
+      ) {
+        return { ok: false, error: "Import cancelled." };
+      }
+      const front = migrateRawFront(
+        file.front as Partial<FrontState> & { nameOffsetY?: number; titleOffsetY?: number },
+      );
+      const back = migrateRawBack(
+        file.back as Partial<BackState> & { qrStyle?: unknown },
+        defaultBackForPerson(id),
+      );
+      setPeople((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...file.person, id: p.id } : p)),
+      );
+      setFrontByPersonId((prev) => ({ ...prev, [id]: front }));
+      setBackByPersonId((prev) => ({ ...prev, [id]: back }));
+      return { ok: true };
+    },
+    [selectedId, people],
+  );
+
   /* ── Clear all saved data ─────────────────────────────────────── */
   const clearSavedData = () => {
     if (
@@ -273,6 +342,8 @@ export function useEditorState() {
     deletePerson,
     /* actions */
     clearSavedData,
+    exportSelectedPersonSettings,
+    importPersonSettingsFromJson,
   };
 }
 

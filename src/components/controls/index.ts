@@ -5,6 +5,7 @@ export { FrontPanel } from "./FrontPanel";
 export { LogoPicker } from "./LogoPicker";
 export { PatternPanel } from "./PatternPanel";
 export { PeopleList } from "./PeopleList";
+export { PersonSettingsTransfer } from "./PersonSettingsTransfer";
 export { PositioningPanel } from "./PositioningPanel";
 export { ChipRow, FDRange } from "./Primitives";
 export { QrLinksManager } from "./QrLinksManager";

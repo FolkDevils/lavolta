@@ -65,10 +65,11 @@ src/
 │       ├── QrLinksManager.tsx    # editable QR link list
 │       ├── PatternPanel.tsx      # flower pattern toggles + density/size/rot/opacity sliders
 │       ├── ExportMenu.tsx        # export dropdown (SVG/PNG/PDF × front/back/both)
+│       ├── PersonSettingsTransfer.tsx  # per-person JSON backup (download / import)
 │       └── PeopleList.tsx        # people rail — add/edit/delete/select persons
 │
 ├── hooks/
-│   ├── useEditorState.ts  # all app state + persistence (people, front/back per person)
+│   ├── useEditorState.ts  # all app state + persistence (people, front/back per person, JSON backup)
 │   └── useExport.ts       # export state, SVG refs, handleExport
 │
 └── lib/
@@ -82,6 +83,7 @@ src/
     ├── storage.ts     # STORAGE_KEY constant
     ├── color.ts       # resolveCardPalette(), resolveSolidHex(), toHex6ForColorInput()
     ├── export.ts      # exportSvg(), exportPng(), exportPdf(), EXPORT_SPEC
+    ├── personSettingsFile.ts  # PersonSettingsFileV1 envelope + parse/build helpers
     ├── qr.ts          # QR path-building helpers (used by QrModule)
     └── rng.ts         # seeded RNG used by PatternLayer
 ```
@@ -117,6 +119,7 @@ State is stored in `localStorage` under key `STORAGE_KEY = "fd_bcb_v4"` as:
 - Derived: `person`, `front`, `back`, `factoryFront`, `factoryBack`
 - Mutations: `updateFront(patch)`, `patchSelectedFront(fn)`, same for back, plus people CRUD
 - Delegates export to `useExport(person)` which owns `frontSvgRef`, `backSvgRef`, `handleExport`
+- `exportSelectedPersonSettings()` / `importPersonSettingsFromJson(text)` — per-person JSON backup (see `personSettingsFile.ts`; UI in `PersonSettingsTransfer` in the People rail)
 
 `Editor.tsx` calls `useEditorState()`, spreads the result, and passes slices to panels.
 
