@@ -474,6 +474,19 @@ export const DEFAULT_PATTERN: PatternConfig = {
   seed: 4242,
 };
 
+/** Avi Cohen (person id 3) — tuned flower presets; front vs back differ. */
+export const AVI_FRONT_FLOWER_PATTERN: PatternConfig = {
+  on: true,
+  f1: false,
+  f2: true,
+  f3: false,
+  density: 43,
+  size: 112,
+  rot: 210,
+  opacity: 17,
+  seed: 4242,
+};
+
 /** Ted Royer — stack · logo right, tuned wordmark position, neutral type/position (id 1 + anyone not Andrew/Avi). */
 export const DEFAULT_FRONT: FrontState = {
   color: "dark",
@@ -495,7 +508,8 @@ export const DEFAULT_FRONT: FrontState = {
   fontScaleContactLabel: clampFontScale(0.9),
   fontScaleContactValue: clampFontScale(1.1),
   layout: "stack_logo_right",
-  pat: { ...DEFAULT_PATTERN },
+  /* Middle flower only (f2); density/size match global recipe; rot + opacity tuned for print. */
+  pat: { ...DEFAULT_PATTERN, rot: 360, opacity: 29 },
 };
 
 /** Ted = `DEFAULT_FRONT`. Andrew (2) & Avi (3) = centered layout + the tuned type/logo/text-position you specified. */
@@ -505,7 +519,8 @@ export function defaultFrontForPerson(personId: number): FrontState {
   if (personId === 2 || personId === 3) {
     return {
       ...ted,
-      pat: { ...ted.pat },
+      /* Andrew shares Ted’s flower defaults; Avi uses his own front flower recipe. */
+      pat: personId === 3 ? { ...AVI_FRONT_FLOWER_PATTERN } : { ...ted.pat },
       layout: "centered",
       logoScale: clampLogoScale(2),
       logoOffsetX: 0,
@@ -623,9 +638,9 @@ export const DEFAULT_BACK: BackState = {
   logoOffsetY: DEFAULT_LOGO_OFFSET_Y,
   layout: "one_qr",
   qrColor: "yellow",
-  qrBody: "square",
-  qrEyeFrame: "square",
-  qrEyeBall: "square",
+  qrBody: "dots",
+  qrEyeFrame: "circle",
+  qrEyeBall: "circle",
   qrFrame: null,
   qrFrameRadius: 0.06,
   qrLinks: DEFAULT_QR_LINKS.map((l) => ({ ...l })),
@@ -635,6 +650,114 @@ export const DEFAULT_BACK: BackState = {
   fontMinimalLink: BACK_FONT_MINIMAL_DEFAULT,
   pat: { ...DEFAULT_PATTERN },
 };
+
+export const AVI_BACK_FLOWER_PATTERN: PatternConfig = {
+  on: true,
+  f1: false,
+  f2: true,
+  f3: false,
+  density: 80,
+  size: 114,
+  rot: 91,
+  opacity: 17,
+  seed: 4242,
+};
+
+/** Factory back face; Avi (id 3) alone swaps in `AVI_BACK_FLOWER_PATTERN`. */
+export function defaultBackForPerson(personId: number): BackState {
+  const b = JSON.parse(JSON.stringify(DEFAULT_BACK)) as BackState;
+  if (personId === 3) {
+    b.pat = { ...AVI_BACK_FLOWER_PATTERN };
+  }
+  return b;
+}
+
+/** Merge partial saved back (incl. legacy `qrStyle`) onto a full baseline for one person. */
+export function migrateRawBack(
+  raw: Partial<BackState> & { qrStyle?: unknown },
+  defaults: BackState,
+): BackState {
+  const base = JSON.parse(JSON.stringify(defaults)) as BackState;
+  const savedLinks =
+    Array.isArray(raw.qrLinks) && raw.qrLinks.length > 0
+      ? raw.qrLinks.map((l) => ({ ...l }))
+      : base.qrLinks.map((l) => ({ ...l }));
+  const savedIds = Array.isArray(raw.qrLinkIds)
+    ? raw.qrLinkIds.filter((id) => savedLinks.some((l) => l.id === id))
+    : [...base.qrLinkIds];
+  const legacyDesign = qrStyleToDesignFields((raw as { qrStyle?: unknown }).qrStyle);
+  const migratedBackLogo = raw.logo != null ? normalizeLogoId(raw.logo) : base.logo;
+  const normalizedLayout = normalizeBackLayout(raw.layout, base.layout);
+  const baseQrIds = savedIds.length > 0 ? savedIds : savedLinks.slice(0, 2).map((l) => l.id);
+  const qrLinkIdsHydrated =
+    normalizedLayout === "one_qr" && baseQrIds.length > 1 ? [baseQrIds[0]!] : [...baseQrIds];
+
+  const patMerged: PatternConfig = {
+    ...base.pat,
+    ...(raw.pat && typeof raw.pat === "object" ? raw.pat : {}),
+  };
+
+  return {
+    ...base,
+    layout: normalizedLayout,
+    logo: migratedBackLogo,
+    logoScale: clampLogoScale(raw.logoScale ?? base.logoScale),
+    logoOffsetX: clampLogoOffsetX(raw.logoOffsetX ?? base.logoOffsetX),
+    logoOffsetY: clampLogoOffsetY(raw.logoOffsetY ?? base.logoOffsetY),
+    color: normalizeColorValue(raw.color ?? base.color, "dark"),
+    qrColor:
+      raw.qrColor === null ? null : normalizeColorValue(raw.qrColor ?? base.qrColor, "yellow"),
+    qrBody: normalizeQrBody(raw.qrBody ?? legacyDesign.qrBody),
+    qrEyeFrame: normalizeQrEye(raw.qrEyeFrame ?? legacyDesign.qrEyeFrame),
+    qrEyeBall: normalizeQrEye(raw.qrEyeBall ?? legacyDesign.qrEyeBall),
+    qrFrame: raw.qrFrame !== undefined ? raw.qrFrame : base.qrFrame,
+    qrFrameRadius: raw.qrFrameRadius ?? base.qrFrameRadius,
+    qrLinks: savedLinks,
+    qrLinkIds: qrLinkIdsHydrated,
+    textFill: raw.textFill !== undefined ? raw.textFill : base.textFill,
+    subTextFill: raw.subTextFill !== undefined ? raw.subTextFill : base.subTextFill,
+    fontQrCaption: clampFontQrCaption(raw.fontQrCaption ?? base.fontQrCaption),
+    fontBackDisplay: clampFontBackDisplay(raw.fontBackDisplay ?? base.fontBackDisplay),
+    fontMinimalLink: clampFontMinimalLink(raw.fontMinimalLink ?? base.fontMinimalLink),
+    pat: patMerged,
+  };
+}
+
+export function buildBackByPersonIdFromSaved(
+  saved: {
+    front?: Partial<FrontState>;
+    back?: Partial<BackState> & { qrStyle?: unknown };
+    backByPersonId?: Record<string, unknown>;
+  } | null,
+  people: Person[],
+): Record<number, BackState> {
+  const out: Record<number, BackState> = {};
+  const rawMap = saved?.backByPersonId as Record<string, Partial<BackState>> | undefined;
+  const hasPer = rawMap && typeof rawMap === "object" && Object.keys(rawMap).length > 0;
+
+  for (const p of people) {
+    const defaults = defaultBackForPerson(p.id);
+    const key = String(p.id);
+    const disk = hasPer ? rawMap[key] : undefined;
+    if (disk && typeof disk === "object" && Object.keys(disk).length > 0) {
+      out[p.id] = migrateRawBack(disk as Partial<BackState> & { qrStyle?: unknown }, defaults);
+    } else if (saved?.back && !hasPer) {
+      let legacy = saved.back as Partial<BackState> & { qrStyle?: unknown };
+      if (
+        legacy.logo == null &&
+        saved.front &&
+        typeof saved.front === "object" &&
+        saved.front.logo != null
+      ) {
+        legacy = { ...legacy, logo: saved.front.logo };
+      }
+      out[p.id] = migrateRawBack(legacy, defaults);
+    } else {
+      out[p.id] = JSON.parse(JSON.stringify(defaults)) as BackState;
+    }
+  }
+  return out;
+}
 
 export const QR_BODY_OPTIONS: { id: BackState["qrBody"]; name: string }[] = [
   { id: "square", name: "Square" },

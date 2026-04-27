@@ -7,11 +7,9 @@ import {
   BACK_FONT_CAPTION_DEFAULT,
   BACK_FONT_DISPLAY_DEFAULT,
   BACK_FONT_MINIMAL_DEFAULT,
+  buildBackByPersonIdFromSaved,
   buildFrontByPersonIdFromSaved,
   clampContactTelEmailGap,
-  clampFontBackDisplay,
-  clampFontMinimalLink,
-  clampFontQrCaption,
   clampFontScale,
   clampLogoOffsetX,
   clampLogoOffsetY,
@@ -25,25 +23,20 @@ import {
   FONT_SCALE_RANGE,
   NAME_TITLE_GAP_RANGE,
   COLORS,
-  DEFAULT_BACK,
   DEFAULT_PEOPLE,
+  defaultBackForPerson,
   defaultFrontForPerson,
-  DEFAULT_QR_LINKS,
   FD_SOLID_PALETTE,
   FRONT_LAYOUTS,
   LOGO_OFFSET_RANGE,
   LOGO_SCALE_RANGE,
   LOGOS,
-  normalizeBackLayout,
   normalizeColorValue,
   normalizeFrontLayout,
   normalizeLogoId,
-  normalizeQrBody,
-  normalizeQrEye,
   QR_BODY_OPTIONS,
   QR_COLORS,
   QR_EYE_OPTIONS,
-  qrStyleToDesignFields,
   STORAGE_KEY,
   TEXT_OFFSET_RANGE,
 } from "@/lib/constants";
@@ -80,7 +73,9 @@ type Saved = {
   /** Legacy single front; migrated to the first person when `frontByPersonId` is absent. */
   front?: FrontState;
   frontByPersonId?: Record<number, FrontState>;
-  back: BackState;
+  /** Legacy single back; migrated per person when `backByPersonId` is absent. */
+  back?: BackState;
+  backByPersonId?: Record<number, BackState>;
   selectedId: number | undefined;
 };
 
@@ -97,12 +92,21 @@ function initialFrontByPersonId(): Record<number, FrontState> {
   return m;
 }
 
+function initialBackByPersonId(): Record<number, BackState> {
+  const m: Record<number, BackState> = {};
+  for (const p of DEFAULT_PEOPLE) {
+    m[p.id] = JSON.parse(JSON.stringify(defaultBackForPerson(p.id))) as BackState;
+  }
+  return m;
+}
+
 export default function Editor() {
   /* ── State ──────────────────────────────────────────────── */
   const [people, setPeople] = useState<Person[]>(DEFAULT_PEOPLE);
   const [frontByPersonId, setFrontByPersonId] =
     useState<Record<number, FrontState>>(initialFrontByPersonId);
-  const [back, setBack] = useState<BackState>(DEFAULT_BACK);
+  const [backByPersonId, setBackByPersonId] =
+    useState<Record<number, BackState>>(initialBackByPersonId);
   const [selectedId, setSelectedId] = useState<number | undefined>(DEFAULT_PEOPLE[0]?.id);
   const [tab, setTab] = useState<"front" | "back">("front");
   const [face, setFace] = useState<"front" | "back">("front");
@@ -129,6 +133,16 @@ export default function Editor() {
     [frontByPersonId, selectedPersonId, factoryFront],
   );
 
+  const factoryBack = useMemo(
+    () => defaultBackForPerson(selectedPersonId),
+    [selectedPersonId],
+  );
+
+  const back = useMemo(
+    () => backByPersonId[selectedPersonId] ?? factoryBack,
+    [backByPersonId, selectedPersonId, factoryBack],
+  );
+
   const patchSelectedFront = useCallback(
     (fn: (f: FrontState) => FrontState) => {
       const id = selectedId ?? people[0]?.id ?? 1;
@@ -151,6 +165,17 @@ export default function Editor() {
     [selectedId, people],
   );
 
+  const patchSelectedBack = useCallback(
+    (fn: (b: BackState) => BackState) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setBackByPersonId((prev) => ({
+        ...prev,
+        [id]: fn(prev[id] ?? defaultBackForPerson(id)),
+      }));
+    },
+    [selectedId, people],
+  );
+
   /* ── Persistence ────────────────────────────────────────── */
   // Load once
   useEffect(() => {
@@ -161,55 +186,7 @@ export default function Editor() {
         const peopleList = saved.people?.length ? saved.people : DEFAULT_PEOPLE;
         if (saved.people?.length) setPeople(saved.people);
         setFrontByPersonId(buildFrontByPersonIdFromSaved(saved, peopleList));
-        if (saved.back) {
-          const savedLinks = Array.isArray(saved.back.qrLinks) && saved.back.qrLinks.length
-            ? saved.back.qrLinks
-            : DEFAULT_QR_LINKS.map((l) => ({ ...l }));
-          const savedIds = Array.isArray(saved.back.qrLinkIds)
-            ? saved.back.qrLinkIds.filter((id) => savedLinks.some((l) => l.id === id))
-            : DEFAULT_BACK.qrLinkIds;
-          /* Migration: older saves had a single `qrStyle` field; map it to
-           * the new Body / Eye Frame / Eye Ball triplet, then let explicit
-           * new-style values (if present) override. */
-          const legacy = (saved.back as unknown as { qrStyle?: unknown }).qrStyle;
-          const legacyDesign = qrStyleToDesignFields(legacy);
-          const migratedBackLogo =
-            saved.back.logo != null
-              ? normalizeLogoId(saved.back.logo)
-              : saved.front?.logo != null
-                ? normalizeLogoId(saved.front.logo)
-                : DEFAULT_BACK.logo;
-          const normalizedLayout = normalizeBackLayout(saved.back.layout, DEFAULT_BACK.layout);
-          const baseQrIds = savedIds.length ? savedIds : savedLinks.slice(0, 2).map((l) => l.id);
-          const qrLinkIdsHydrated =
-            normalizedLayout === "one_qr" && baseQrIds.length > 1 ? [baseQrIds[0]] : baseQrIds;
-          setBack({
-            ...DEFAULT_BACK,
-            ...saved.back,
-            layout: normalizedLayout,
-            logo: migratedBackLogo,
-            logoScale: clampLogoScale(saved.back.logoScale),
-            logoOffsetX: clampLogoOffsetX(saved.back.logoOffsetX),
-            logoOffsetY: clampLogoOffsetY(saved.back.logoOffsetY),
-            color: normalizeColorValue(saved.back.color, "dark"),
-            qrColor:
-              saved.back.qrColor === null
-                ? null
-                : normalizeColorValue(saved.back.qrColor, "yellow"),
-            qrBody: normalizeQrBody(saved.back.qrBody ?? legacyDesign.qrBody),
-            qrEyeFrame: normalizeQrEye(saved.back.qrEyeFrame ?? legacyDesign.qrEyeFrame),
-            qrEyeBall: normalizeQrEye(saved.back.qrEyeBall ?? legacyDesign.qrEyeBall),
-            qrFrame: saved.back.qrFrame ?? null,
-            qrFrameRadius: saved.back.qrFrameRadius ?? DEFAULT_BACK.qrFrameRadius,
-            qrLinks: savedLinks,
-            qrLinkIds: qrLinkIdsHydrated,
-            textFill: saved.back.textFill ?? null,
-            subTextFill: saved.back.subTextFill ?? null,
-            fontQrCaption: clampFontQrCaption(saved.back.fontQrCaption),
-            fontBackDisplay: clampFontBackDisplay(saved.back.fontBackDisplay),
-            fontMinimalLink: clampFontMinimalLink(saved.back.fontMinimalLink),
-          });
-        }
+        setBackByPersonId(buildBackByPersonIdFromSaved(saved, peopleList));
         if (saved.selectedId != null) setSelectedId(saved.selectedId);
       }
     } catch {
@@ -222,12 +199,12 @@ export default function Editor() {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      const data: Saved = { people, frontByPersonId, back, selectedId };
+      const data: Saved = { people, frontByPersonId, backByPersonId, selectedId };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       /* ignore */
     }
-  }, [hydrated, people, frontByPersonId, back, selectedId]);
+  }, [hydrated, people, frontByPersonId, backByPersonId, selectedId]);
 
   const person = useMemo(
     () => people.find((p) => p.id === selectedId) ?? people[0],
@@ -285,8 +262,16 @@ export default function Editor() {
   };
 
   /* ── Helpers ────────────────────────────────────────────── */
-  const upB = <K extends keyof BackState>(k: K, v: BackState[K]) =>
-    setBack((b) => ({ ...b, [k]: v }));
+  const upB = useCallback(
+    <K extends keyof BackState>(k: K, v: BackState[K]) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setBackByPersonId((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? defaultBackForPerson(id)), [k]: v },
+      }));
+    },
+    [selectedId, people],
+  );
 
   const clearSavedData = () => {
     if (
@@ -303,7 +288,7 @@ export default function Editor() {
     }
     setPeople(JSON.parse(JSON.stringify(DEFAULT_PEOPLE)) as Person[]);
     setFrontByPersonId(initialFrontByPersonId());
-    setBack(JSON.parse(JSON.stringify(DEFAULT_BACK)) as BackState);
+    setBackByPersonId(initialBackByPersonId());
     setSelectedId(DEFAULT_PEOPLE[0]?.id);
     setPeopleListKey((k) => k + 1);
     setExportError(null);
@@ -378,6 +363,10 @@ export default function Editor() {
                 ...prev,
                 [id]: JSON.parse(JSON.stringify(defaultFrontForPerson(id))) as FrontState,
               }));
+              setBackByPersonId((prev) => ({
+                ...prev,
+                [id]: JSON.parse(JSON.stringify(defaultBackForPerson(id))) as BackState,
+              }));
               setSelectedId(id);
             }}
             onUpdate={(id, patch) =>
@@ -391,6 +380,10 @@ export default function Editor() {
               });
               setFrontByPersonId((prev) => {
                 const { [id]: _, ...rest } = prev;
+                return rest;
+              });
+              setBackByPersonId((prev) => {
+                const { [id]: _b, ...rest } = prev;
                 return rest;
               });
             }}
@@ -687,7 +680,7 @@ export default function Editor() {
                   onTextFill={(v) => upB("textFill", v)}
                   onSubTextFill={(v) => upB("subTextFill", v)}
                   onResetBoth={() =>
-                    setBack((b) => ({ ...b, textFill: null, subTextFill: null }))
+                    patchSelectedBack((b) => ({ ...b, textFill: null, subTextFill: null }))
                   }
                 />
 
@@ -732,7 +725,7 @@ export default function Editor() {
                     <button
                       type="button"
                       onClick={() =>
-                        setBack((b) => ({
+                        patchSelectedBack((b) => ({
                           ...b,
                           fontQrCaption: BACK_FONT_CAPTION_DEFAULT,
                           fontBackDisplay: BACK_FONT_DISPLAY_DEFAULT,
@@ -755,7 +748,7 @@ export default function Editor() {
                     value={back.layout}
                     onChange={(v) => {
                       if (v === "one_qr") {
-                        setBack((b) => ({
+                        patchSelectedBack((b) => ({
                           ...b,
                           layout: "one_qr",
                           qrLinkIds: b.qrLinkIds.length ? [b.qrLinkIds[0]] : ["main"],
@@ -779,8 +772,14 @@ export default function Editor() {
                   onOffsetX={(v) => upB("logoOffsetX", v)}
                   onOffsetY={(v) => upB("logoOffsetY", v)}
                   onResetPosition={() =>
-                    setBack((b) => ({ ...b, logoOffsetX: 0, logoOffsetY: 0 }))
+                    patchSelectedBack((b) => ({
+                      ...b,
+                      logoOffsetX: factoryBack.logoOffsetX,
+                      logoOffsetY: factoryBack.logoOffsetY,
+                    }))
                   }
+                  baselineOffsetX={factoryBack.logoOffsetX}
+                  baselineOffsetY={factoryBack.logoOffsetY}
                 />
 
                 <Divider />
@@ -848,7 +847,7 @@ export default function Editor() {
                   selectedIds={back.qrLinkIds}
                   singleSelect={back.layout === "one_qr"}
                   onChange={(links, selectedIds) =>
-                    setBack((b) => ({ ...b, qrLinks: links, qrLinkIds: selectedIds }))
+                    patchSelectedBack((b) => ({ ...b, qrLinks: links, qrLinkIds: selectedIds }))
                   }
                 />
 
