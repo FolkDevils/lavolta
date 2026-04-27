@@ -37,7 +37,7 @@ export type FrontLayout =
   | "text_left"
   /** Logo top-left, name + details right. */
   | "logo_left";
-export type BackLayout = "two_qr" | "logo_qr" | "type" | "minimal";
+export type BackLayout = "one_qr" | "two_qr" | "logo_qr" | "type" | "minimal";
 
 /** QR color palette ids. Actual field is `string`, can also be a hex. */
 export type QrColorId = "yellow" | "white" | "black" | "purple" | "pink" | "red";
@@ -87,6 +87,11 @@ export type FrontState = {
   contactOffsetY: number;
   /** Vertical distance (viewBox units) between the TEL row and EMAIL row in stack layouts. */
   contactTelEmailGap: number;
+  /** Multipliers on layout-specific base sizes for name / title / contact type. */
+  fontScaleName: number;
+  fontScaleTitle: number;
+  fontScaleContactLabel: number;
+  fontScaleContactValue: number;
   layout: FrontLayout;
   pat: PatternConfig;
 };
@@ -128,6 +133,10 @@ export type BackState = {
   qrLinks: QrLink[];
   /** Which qrLinks[] ids should actually render on the card. */
   qrLinkIds: string[];
+  /** Absolute SVG font sizes (viewBox units) for back-face typography. */
+  fontQrCaption: number;
+  fontBackDisplay: number;
+  fontMinimalLink: number;
   pat: PatternConfig;
 };
 

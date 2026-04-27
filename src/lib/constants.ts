@@ -79,6 +79,11 @@ export function clampLogoScale(n: unknown): number {
 
 export const LOGO_SCALE_RANGE = { min: LOGO_SCALE_MIN, max: LOGO_SCALE_MAX, step: 0.05 } as const;
 
+/** Factory-tuned wordmark defaults (front + back) for first-open / reset. */
+export const DEFAULT_LOGO_SCALE = 1.55;
+export const DEFAULT_LOGO_OFFSET_X = -42;
+export const DEFAULT_LOGO_OFFSET_Y = 2;
+
 /** Slider limits for position nudgers, in SVG viewBox units.
  *  Generous enough to let designers rebalance a layout, tight
  *  enough that you can't drag something completely off-card. */
@@ -166,6 +171,109 @@ export const NAME_TITLE_GAP_RANGE = { min: 8, max: 100, step: 1 } as const;
 export function clampNameTitleGap(n: unknown): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : NAME_TITLE_GAP_DEFAULT_STACK;
   return Math.min(NAME_TITLE_GAP_RANGE.max, Math.max(NAME_TITLE_GAP_RANGE.min, x));
+}
+
+/** Front type scales multiply layout-specific base sizes (see `frontFont*Px`). */
+export const FONT_SCALE_RANGE = { min: 0.55, max: 1.75, step: 0.05 } as const;
+
+export function clampFontScale(n: unknown): number {
+  const x = typeof n === "number" && Number.isFinite(n) ? n : 1;
+  return Math.min(FONT_SCALE_RANGE.max, Math.max(FONT_SCALE_RANGE.min, x));
+}
+
+function fontClampPx(lo: number, hi: number, n: number): number {
+  return Math.min(hi, Math.max(lo, n));
+}
+
+export const FRONT_FONT_NAME_BASE: Record<FrontLayout, number> = {
+  stack: 34,
+  stack_logo_left: 34,
+  stack_logo_right: 34,
+  centered: 28,
+  bold: 56,
+  text_left: 28,
+  logo_left: 28,
+};
+
+export const FRONT_FONT_TITLE_BASE: Record<FrontLayout, number> = {
+  stack: 11,
+  stack_logo_left: 11,
+  stack_logo_right: 11,
+  centered: 10,
+  bold: 10,
+  text_left: 10,
+  logo_left: 10,
+};
+
+export const FRONT_FONT_CONTACT_LABEL_BASE: Record<FrontLayout, number> = {
+  stack: 9,
+  stack_logo_left: 9,
+  stack_logo_right: 9,
+  centered: 9,
+  bold: 9,
+  text_left: 9,
+  logo_left: 9,
+};
+
+export const FRONT_FONT_CONTACT_VALUE_BASE: Record<FrontLayout, number> = {
+  stack: 13,
+  stack_logo_left: 13,
+  stack_logo_right: 13,
+  centered: 12,
+  bold: 12,
+  text_left: 12,
+  logo_left: 12,
+};
+
+export function frontFontNamePx(layout: FrontLayout, scale: unknown): number {
+  return fontClampPx(
+    8,
+    120,
+    Math.round(FRONT_FONT_NAME_BASE[layout] * clampFontScale(scale)),
+  );
+}
+
+export function frontFontTitlePx(layout: FrontLayout, scale: unknown): number {
+  return fontClampPx(
+    5,
+    32,
+    Math.round(FRONT_FONT_TITLE_BASE[layout] * clampFontScale(scale)),
+  );
+}
+
+export function frontFontContactLabelPx(layout: FrontLayout, scale: unknown): number {
+  return fontClampPx(
+    5,
+    20,
+    Math.round(FRONT_FONT_CONTACT_LABEL_BASE[layout] * clampFontScale(scale)),
+  );
+}
+
+export function frontFontContactValuePx(layout: FrontLayout, scale: unknown): number {
+  return fontClampPx(
+    7,
+    28,
+    Math.round(FRONT_FONT_CONTACT_VALUE_BASE[layout] * clampFontScale(scale)),
+  );
+}
+
+export const BACK_FONT_CAPTION_DEFAULT = 10;
+export const BACK_FONT_DISPLAY_DEFAULT = 54;
+export const BACK_FONT_MINIMAL_DEFAULT = 16;
+
+export function clampFontQrCaption(n: unknown): number {
+  const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_CAPTION_DEFAULT;
+  return Math.round(Math.min(22, Math.max(6, x)));
+}
+
+export function clampFontBackDisplay(n: unknown): number {
+  const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_DISPLAY_DEFAULT;
+  return Math.round(Math.min(96, Math.max(20, x)));
+}
+
+export function clampFontMinimalLink(n: unknown): number {
+  const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_MINIMAL_DEFAULT;
+  return Math.round(Math.min(32, Math.max(9, x)));
 }
 
 /* Pixel dimensions at 300 DPI for raster export */
@@ -299,11 +407,21 @@ export function normalizeFrontLayout(layout: unknown): FrontLayout {
 }
 
 export const BACK_LAYOUTS: { id: BackLayout; name: string }[] = [
+  { id: "one_qr", name: "One QR" },
   { id: "two_qr", name: "Two QRs" },
   { id: "logo_qr", name: "Logo + QR" },
   { id: "type", name: "Type Led" },
   { id: "minimal", name: "Minimal" },
 ];
+
+const VALID_BACK_LAYOUT = new Set<BackLayout>(["one_qr", "two_qr", "logo_qr", "type", "minimal"]);
+
+/** Unknown ids fall back to `two_qr` (legacy default). Missing layout uses `whenMissing` (factory default). */
+export function normalizeBackLayout(layout: unknown, whenMissing: BackLayout = "one_qr"): BackLayout {
+  if (layout === undefined || layout === null) return whenMissing;
+  if (VALID_BACK_LAYOUT.has(layout as BackLayout)) return layout as BackLayout;
+  return "two_qr";
+}
 
 export type QrColorDef = { id: QrColorId; name: string; hex: string };
 export const QR_COLORS: QrColorDef[] = [
@@ -341,34 +459,149 @@ export const FLOWER_SCALE: readonly number[] = [2.0, 1.0, 0.9];
 
 export const DEFAULT_PATTERN: PatternConfig = {
   on: true,
-  f1: true,
+  f1: false,
   f2: true,
-  f3: true,
-  density: 30,
-  size: 44,
-  rot: 180,
-  opacity: 14,
+  f3: false,
+  density: 80,
+  size: 20,
+  rot: 80,
+  opacity: 20,
   seed: 4242,
 };
 
+/** Ted Royer — stack · logo right, factory wordmark nudge, neutral type/position (id 1 + anyone not Andrew/Avi). */
 export const DEFAULT_FRONT: FrontState = {
   color: "dark",
   textFill: null,
-  subTextFill: null,
+  subTextFill: "#ffffff",
   phoneFill: null,
   emailFill: null,
   logo: "lg_full",
-  logoScale: 1,
-  logoOffsetX: 0,
-  logoOffsetY: 0,
+  logoScale: clampLogoScale(DEFAULT_LOGO_SCALE),
+  logoOffsetX: DEFAULT_LOGO_OFFSET_X,
+  logoOffsetY: DEFAULT_LOGO_OFFSET_Y,
   textOffsetX: 0,
   nameTitleBlockOffsetY: 0,
   nameTitleGap: NAME_TITLE_GAP_DEFAULT_STACK,
   contactOffsetY: 0,
   contactTelEmailGap: CONTACT_TEL_EMAIL_GAP_DEFAULT,
-  layout: "stack",
+  fontScaleName: clampFontScale(1),
+  fontScaleTitle: clampFontScale(1),
+  fontScaleContactLabel: clampFontScale(1),
+  fontScaleContactValue: clampFontScale(1),
+  layout: "stack_logo_right",
   pat: { ...DEFAULT_PATTERN },
 };
+
+/** Ted = `DEFAULT_FRONT`. Andrew (2) & Avi (3) = centered layout + the tuned type/logo/text-position you specified. */
+export function defaultFrontForPerson(personId: number): FrontState {
+  const ted: FrontState = { ...DEFAULT_FRONT, pat: { ...DEFAULT_FRONT.pat } };
+  if (personId === 1) return JSON.parse(JSON.stringify(ted)) as FrontState;
+  if (personId === 2 || personId === 3) {
+    return {
+      ...ted,
+      pat: { ...ted.pat },
+      layout: "centered",
+      logoScale: clampLogoScale(2),
+      logoOffsetX: 0,
+      logoOffsetY: 20,
+      textOffsetX: 0,
+      nameTitleBlockOffsetY: 30,
+      nameTitleGap: clampNameTitleGap(26),
+      contactOffsetY: 10,
+      contactTelEmailGap: clampContactTelEmailGap(28),
+      fontScaleName: clampFontScale(1.05),
+      fontScaleTitle: clampFontScale(1.1),
+      fontScaleContactLabel: clampFontScale(1),
+      fontScaleContactValue: clampFontScale(1),
+    };
+  }
+  return JSON.parse(JSON.stringify(ted)) as FrontState;
+}
+
+/** Merge a partial saved front (including legacy Y offsets) into a full `FrontState`. */
+export function migrateRawFront(
+  raw: Partial<FrontState> & { nameOffsetY?: number; titleOffsetY?: number },
+): FrontState {
+  const layout = normalizeFrontLayout(raw.layout);
+  const baseGap = defaultNameTitleGap(layout);
+  const legacyFront = raw as Partial<FrontState> & { nameOffsetY?: number; titleOffsetY?: number };
+  let nameTitleGap: number;
+  if (typeof raw.nameTitleGap === "number" && Number.isFinite(raw.nameTitleGap)) {
+    nameTitleGap = clampNameTitleGap(raw.nameTitleGap);
+  } else if (
+    typeof legacyFront.nameOffsetY === "number" ||
+    typeof legacyFront.titleOffsetY === "number"
+  ) {
+    nameTitleGap = clampNameTitleGap(
+      baseGap +
+        (Number(legacyFront.titleOffsetY) || 0) -
+        (Number(legacyFront.nameOffsetY) || 0),
+    );
+  } else {
+    nameTitleGap = clampNameTitleGap(baseGap);
+  }
+  const nameTitleBlockOffsetY = clampTextOffsetY(
+    raw.nameTitleBlockOffsetY ?? legacyFront.nameOffsetY ?? 0,
+  );
+  const patMerged: PatternConfig = {
+    ...DEFAULT_PATTERN,
+    ...(raw.pat && typeof raw.pat === "object" ? raw.pat : {}),
+  };
+  const m: FrontState = {
+    ...DEFAULT_FRONT,
+    ...raw,
+    layout,
+    pat: patMerged,
+  };
+  return {
+    ...m,
+    logo: normalizeLogoId(m.logo),
+    logoScale: clampLogoScale(m.logoScale),
+    logoOffsetX: clampLogoOffsetX(m.logoOffsetX),
+    logoOffsetY: clampLogoOffsetY(m.logoOffsetY),
+    textOffsetX: clampTextOffsetX(m.textOffsetX),
+    nameTitleBlockOffsetY,
+    nameTitleGap,
+    contactOffsetY: clampTextOffsetY(m.contactOffsetY),
+    contactTelEmailGap: clampContactTelEmailGap(m.contactTelEmailGap),
+    fontScaleName: clampFontScale(m.fontScaleName),
+    fontScaleTitle: clampFontScale(m.fontScaleTitle),
+    fontScaleContactLabel: clampFontScale(m.fontScaleContactLabel),
+    fontScaleContactValue: clampFontScale(m.fontScaleContactValue),
+    color: normalizeColorValue(m.color, "dark"),
+    textFill: m.textFill ?? null,
+    subTextFill: m.subTextFill ?? null,
+    phoneFill: m.phoneFill ?? null,
+    emailFill: m.emailFill ?? null,
+  };
+}
+
+export function buildFrontByPersonIdFromSaved(
+  saved: {
+    front?: Partial<FrontState> & { nameOffsetY?: number; titleOffsetY?: number };
+    frontByPersonId?: Record<string, unknown>;
+  } | null,
+  people: Person[],
+): Record<number, FrontState> {
+  const out: Record<number, FrontState> = {};
+  const rawMap = saved?.frontByPersonId as Record<string, Partial<FrontState>> | undefined;
+  const hasPer = rawMap && typeof rawMap === "object" && Object.keys(rawMap).length > 0;
+
+  for (const p of people) {
+    const key = String(p.id);
+    const disk = hasPer ? rawMap[key] : undefined;
+    if (disk && typeof disk === "object" && Object.keys(disk).length > 0) {
+      out[p.id] = migrateRawFront(disk as Partial<FrontState> & { nameOffsetY?: number });
+    } else if (saved?.front && !hasPer) {
+      const firstId = people[0]?.id;
+      out[p.id] = p.id === firstId ? migrateRawFront(saved.front!) : defaultFrontForPerson(p.id);
+    } else {
+      out[p.id] = defaultFrontForPerson(p.id);
+    }
+  }
+  return out;
+}
 
 export const DEFAULT_QR_LINKS: QrLink[] = [
   { id: "main", label: "folkdevils.io", url: "https://www.folkdevils.io/" },
@@ -378,12 +611,12 @@ export const DEFAULT_QR_LINKS: QrLink[] = [
 export const DEFAULT_BACK: BackState = {
   color: "dark",
   textFill: null,
-  subTextFill: null,
+  subTextFill: "yellow",
   logo: "lg_full",
-  logoScale: 1,
-  logoOffsetX: 0,
-  logoOffsetY: 0,
-  layout: "two_qr",
+  logoScale: DEFAULT_LOGO_SCALE,
+  logoOffsetX: DEFAULT_LOGO_OFFSET_X,
+  logoOffsetY: DEFAULT_LOGO_OFFSET_Y,
+  layout: "one_qr",
   qrColor: "yellow",
   qrBody: "square",
   qrEyeFrame: "square",
@@ -391,8 +624,11 @@ export const DEFAULT_BACK: BackState = {
   qrFrame: null,
   qrFrameRadius: 0.06,
   qrLinks: DEFAULT_QR_LINKS.map((l) => ({ ...l })),
-  qrLinkIds: ["main", "lab"],
-  pat: { ...DEFAULT_PATTERN, density: 32, opacity: 16, seed: 9191 },
+  qrLinkIds: ["main"],
+  fontQrCaption: BACK_FONT_CAPTION_DEFAULT,
+  fontBackDisplay: BACK_FONT_DISPLAY_DEFAULT,
+  fontMinimalLink: BACK_FONT_MINIMAL_DEFAULT,
+  pat: { ...DEFAULT_PATTERN },
 };
 
 export const QR_BODY_OPTIONS: { id: BackState["qrBody"]; name: string }[] = [
@@ -456,6 +692,20 @@ export const DEFAULT_PEOPLE: Person[] = [
     title: "CCO / FOUNDER",
     phone: "(646) 621-0279",
     email: "ted@folkdevils.io",
+  },
+  {
+    id: 2,
+    name: "Andrew Eaton",
+    title: "DESIGN LEAD / FOUNDER",
+    phone: "(201) 881-6941",
+    email: "andrew@folkdevils.io",
+  },
+  {
+    id: 3,
+    name: "Avi Cohen",
+    title: "STRATEGY LEAD / FOUNDER",
+    phone: "(516) 864-1377",
+    email: "avi@folkdevils.io",
   },
 ];
 

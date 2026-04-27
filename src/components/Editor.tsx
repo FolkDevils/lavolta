@@ -1,10 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BACK_LAYOUTS,
+  BACK_FONT_CAPTION_DEFAULT,
+  BACK_FONT_DISPLAY_DEFAULT,
+  BACK_FONT_MINIMAL_DEFAULT,
+  buildFrontByPersonIdFromSaved,
   clampContactTelEmailGap,
+  clampFontBackDisplay,
+  clampFontMinimalLink,
+  clampFontQrCaption,
+  clampFontScale,
   clampLogoOffsetX,
   clampLogoOffsetY,
   clampLogoScale,
@@ -14,17 +22,19 @@ import {
   CONTACT_TEL_EMAIL_GAP_DEFAULT,
   CONTACT_TEL_EMAIL_GAP_RANGE,
   defaultNameTitleGap,
+  FONT_SCALE_RANGE,
   NAME_TITLE_GAP_RANGE,
   COLORS,
   DEFAULT_BACK,
-  DEFAULT_FRONT,
   DEFAULT_PEOPLE,
+  defaultFrontForPerson,
   DEFAULT_QR_LINKS,
   FD_SOLID_PALETTE,
   FRONT_LAYOUTS,
   LOGO_OFFSET_RANGE,
   LOGO_SCALE_RANGE,
   LOGOS,
+  normalizeBackLayout,
   normalizeColorValue,
   normalizeFrontLayout,
   normalizeLogoId,
@@ -67,7 +77,9 @@ const QR_PALETTE_OPTIONS: PaletteOption[] = QR_COLORS.map((c) => ({
 
 type Saved = {
   people: Person[];
-  front: FrontState;
+  /** Legacy single front; migrated to the first person when `frontByPersonId` is absent. */
+  front?: FrontState;
+  frontByPersonId?: Record<number, FrontState>;
   back: BackState;
   selectedId: number | undefined;
 };
@@ -77,10 +89,19 @@ type Saved = {
  * original Figma-style tool but all rendering is SVG-native so
  * exports are trivial.
  * ────────────────────────────────────────────────────────── */
+function initialFrontByPersonId(): Record<number, FrontState> {
+  const m: Record<number, FrontState> = {};
+  for (const p of DEFAULT_PEOPLE) {
+    m[p.id] = JSON.parse(JSON.stringify(defaultFrontForPerson(p.id))) as FrontState;
+  }
+  return m;
+}
+
 export default function Editor() {
   /* ── State ──────────────────────────────────────────────── */
   const [people, setPeople] = useState<Person[]>(DEFAULT_PEOPLE);
-  const [front, setFront] = useState<FrontState>(DEFAULT_FRONT);
+  const [frontByPersonId, setFrontByPersonId] =
+    useState<Record<number, FrontState>>(initialFrontByPersonId);
   const [back, setBack] = useState<BackState>(DEFAULT_BACK);
   const [selectedId, setSelectedId] = useState<number | undefined>(DEFAULT_PEOPLE[0]?.id);
   const [tab, setTab] = useState<"front" | "back">("front");
@@ -90,6 +111,45 @@ export default function Editor() {
   const [hydrated, setHydrated] = useState(false);
   const [exporting, setExporting] = useState<null | "svg" | "png" | "pdf">(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  /** Increment after clearing storage so PeopleList remounts (drops edit UI state). */
+  const [peopleListKey, setPeopleListKey] = useState(0);
+
+  const selectedPersonId = useMemo(
+    () => selectedId ?? people[0]?.id ?? 1,
+    [selectedId, people],
+  );
+
+  const factoryFront = useMemo(
+    () => defaultFrontForPerson(selectedPersonId),
+    [selectedPersonId],
+  );
+
+  const front = useMemo(
+    () => frontByPersonId[selectedPersonId] ?? factoryFront,
+    [frontByPersonId, selectedPersonId, factoryFront],
+  );
+
+  const patchSelectedFront = useCallback(
+    (fn: (f: FrontState) => FrontState) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setFrontByPersonId((prev) => ({
+        ...prev,
+        [id]: fn(prev[id] ?? defaultFrontForPerson(id)),
+      }));
+    },
+    [selectedId, people],
+  );
+
+  const upF = useCallback(
+    <K extends keyof FrontState>(k: K, v: FrontState[K]) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setFrontByPersonId((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? defaultFrontForPerson(id)), [k]: v },
+      }));
+    },
+    [selectedId, people],
+  );
 
   /* ── Persistence ────────────────────────────────────────── */
   // Load once
@@ -98,55 +158,9 @@ export default function Editor() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as Partial<Saved>;
+        const peopleList = saved.people?.length ? saved.people : DEFAULT_PEOPLE;
         if (saved.people?.length) setPeople(saved.people);
-        if (saved.front) {
-          const layout = normalizeFrontLayout(saved.front.layout);
-          const baseGap = defaultNameTitleGap(layout);
-          const legacyFront = saved.front as FrontState & {
-            nameOffsetY?: number;
-            titleOffsetY?: number;
-          };
-          let nameTitleGap: number;
-          if (
-            typeof saved.front.nameTitleGap === "number" &&
-            Number.isFinite(saved.front.nameTitleGap)
-          ) {
-            nameTitleGap = clampNameTitleGap(saved.front.nameTitleGap);
-          } else if (
-            typeof legacyFront.nameOffsetY === "number" ||
-            typeof legacyFront.titleOffsetY === "number"
-          ) {
-            nameTitleGap = clampNameTitleGap(
-              baseGap +
-                (Number(legacyFront.titleOffsetY) || 0) -
-                (Number(legacyFront.nameOffsetY) || 0),
-            );
-          } else {
-            nameTitleGap = clampNameTitleGap(baseGap);
-          }
-          const nameTitleBlockOffsetY = clampTextOffsetY(
-            saved.front.nameTitleBlockOffsetY ?? legacyFront.nameOffsetY ?? 0,
-          );
-          setFront({
-            ...DEFAULT_FRONT,
-            ...saved.front,
-            layout,
-            logo: normalizeLogoId(saved.front.logo),
-            logoScale: clampLogoScale(saved.front.logoScale),
-            logoOffsetX: clampLogoOffsetX(saved.front.logoOffsetX),
-            logoOffsetY: clampLogoOffsetY(saved.front.logoOffsetY),
-            textOffsetX: clampTextOffsetX(saved.front.textOffsetX),
-            nameTitleBlockOffsetY,
-            nameTitleGap,
-            contactOffsetY: clampTextOffsetY(saved.front.contactOffsetY),
-            contactTelEmailGap: clampContactTelEmailGap(saved.front.contactTelEmailGap),
-            color: normalizeColorValue(saved.front.color, "dark"),
-            textFill: saved.front.textFill ?? null,
-            subTextFill: saved.front.subTextFill ?? null,
-            phoneFill: saved.front.phoneFill ?? null,
-            emailFill: saved.front.emailFill ?? null,
-          });
-        }
+        setFrontByPersonId(buildFrontByPersonIdFromSaved(saved, peopleList));
         if (saved.back) {
           const savedLinks = Array.isArray(saved.back.qrLinks) && saved.back.qrLinks.length
             ? saved.back.qrLinks
@@ -165,9 +179,14 @@ export default function Editor() {
               : saved.front?.logo != null
                 ? normalizeLogoId(saved.front.logo)
                 : DEFAULT_BACK.logo;
+          const normalizedLayout = normalizeBackLayout(saved.back.layout, DEFAULT_BACK.layout);
+          const baseQrIds = savedIds.length ? savedIds : savedLinks.slice(0, 2).map((l) => l.id);
+          const qrLinkIdsHydrated =
+            normalizedLayout === "one_qr" && baseQrIds.length > 1 ? [baseQrIds[0]] : baseQrIds;
           setBack({
             ...DEFAULT_BACK,
             ...saved.back,
+            layout: normalizedLayout,
             logo: migratedBackLogo,
             logoScale: clampLogoScale(saved.back.logoScale),
             logoOffsetX: clampLogoOffsetX(saved.back.logoOffsetX),
@@ -183,9 +202,12 @@ export default function Editor() {
             qrFrame: saved.back.qrFrame ?? null,
             qrFrameRadius: saved.back.qrFrameRadius ?? DEFAULT_BACK.qrFrameRadius,
             qrLinks: savedLinks,
-            qrLinkIds: savedIds.length ? savedIds : savedLinks.slice(0, 2).map((l) => l.id),
+            qrLinkIds: qrLinkIdsHydrated,
             textFill: saved.back.textFill ?? null,
             subTextFill: saved.back.subTextFill ?? null,
+            fontQrCaption: clampFontQrCaption(saved.back.fontQrCaption),
+            fontBackDisplay: clampFontBackDisplay(saved.back.fontBackDisplay),
+            fontMinimalLink: clampFontMinimalLink(saved.back.fontMinimalLink),
           });
         }
         if (saved.selectedId != null) setSelectedId(saved.selectedId);
@@ -200,12 +222,12 @@ export default function Editor() {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      const data: Saved = { people, front, back, selectedId };
+      const data: Saved = { people, frontByPersonId, back, selectedId };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       /* ignore */
     }
-  }, [hydrated, people, front, back, selectedId]);
+  }, [hydrated, people, frontByPersonId, back, selectedId]);
 
   const person = useMemo(
     () => people.find((p) => p.id === selectedId) ?? people[0],
@@ -263,10 +285,29 @@ export default function Editor() {
   };
 
   /* ── Helpers ────────────────────────────────────────────── */
-  const upF = <K extends keyof FrontState>(k: K, v: FrontState[K]) =>
-    setFront((f) => ({ ...f, [k]: v }));
   const upB = <K extends keyof BackState>(k: K, v: BackState[K]) =>
     setBack((b) => ({ ...b, [k]: v }));
+
+  const clearSavedData = () => {
+    if (
+      !window.confirm(
+        "Clear all saved settings, people, and card designs stored in this browser? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    setPeople(JSON.parse(JSON.stringify(DEFAULT_PEOPLE)) as Person[]);
+    setFrontByPersonId(initialFrontByPersonId());
+    setBack(JSON.parse(JSON.stringify(DEFAULT_BACK)) as BackState);
+    setSelectedId(DEFAULT_PEOPLE[0]?.id);
+    setPeopleListKey((k) => k + 1);
+    setExportError(null);
+  };
 
   if (!person) {
     return (
@@ -326,25 +367,49 @@ export default function Editor() {
         <aside className="w-[220px] bg-[#130009] border-r border-[rgba(255,208,0,0.08)] p-3 overflow-y-auto flex-shrink-0">
           <SectionLabel>People</SectionLabel>
           <PeopleList
+            key={peopleListKey}
             people={people}
             selectedId={selectedId}
             onSelect={setSelectedId}
             onAdd={(p) => {
               const id = Date.now();
               setPeople((v) => [...v, { ...p, id }]);
+              setFrontByPersonId((prev) => ({
+                ...prev,
+                [id]: JSON.parse(JSON.stringify(defaultFrontForPerson(id))) as FrontState,
+              }));
               setSelectedId(id);
             }}
             onUpdate={(id, patch) =>
               setPeople((v) => v.map((p) => (p.id === id ? { ...p, ...patch } : p)))
             }
-            onDelete={(id) =>
+            onDelete={(id) => {
               setPeople((v) => {
                 const next = v.filter((p) => p.id !== id);
                 if (selectedId === id) setSelectedId(next[0]?.id);
                 return next;
-              })
-            }
+              });
+              setFrontByPersonId((prev) => {
+                const { [id]: _, ...rest } = prev;
+                return rest;
+              });
+            }}
           />
+
+          <div className="mt-6 pt-4 border-t border-[rgba(255,208,0,0.08)]">
+            <SectionLabel>Saved data</SectionLabel>
+            <p className="text-[9px] text-[rgba(255,208,0,0.4)] leading-snug mb-2">
+              Remove everything stored in this browser for the builder and load factory defaults (including logo scale
+              and position).
+            </p>
+            <button
+              type="button"
+              onClick={clearSavedData}
+              className="w-full py-2 px-3 rounded-md border border-[rgba(255,208,0,0.25)] text-[10px] font-bold uppercase tracking-[0.1em] text-[#ffd000] hover:bg-[rgba(255,208,0,0.08)] hover:border-[rgba(255,208,0,0.45)] transition"
+            >
+              Clear saved data
+            </button>
+          </div>
 
           <div className="mt-6 pt-4 border-t border-[rgba(255,208,0,0.08)]">
             <SectionLabel>Print Spec</SectionLabel>
@@ -462,16 +527,84 @@ export default function Editor() {
                   onTextFill={(v) => upF("textFill", v)}
                   onSubTextFill={(v) => upF("subTextFill", v)}
                   onResetBoth={() =>
-                    setFront((f) => ({ ...f, textFill: null, subTextFill: null }))
+                    patchSelectedFront((f) => ({ ...f, textFill: null, subTextFill: null }))
                   }
                   phoneFill={front.phoneFill}
                   emailFill={front.emailFill}
                   onPhoneFill={(v) => upF("phoneFill", v)}
                   onEmailFill={(v) => upF("emailFill", v)}
                   onResetContact={() =>
-                    setFront((f) => ({ ...f, phoneFill: null, emailFill: null }))
+                    patchSelectedFront((f) => ({ ...f, phoneFill: null, emailFill: null }))
                   }
                 />
+
+                <Divider />
+
+                <div>
+                  <SectionLabel>Front type sizes</SectionLabel>
+                  <p className="text-[8px] text-[rgba(255,208,0,0.38)] leading-snug mb-2">
+                    Each slider scales that role against the layout’s default (name/title scale together per layout
+                    recipe).
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <FDRange
+                      label="Name"
+                      min={FONT_SCALE_RANGE.min}
+                      max={FONT_SCALE_RANGE.max}
+                      step={FONT_SCALE_RANGE.step}
+                      value={front.fontScaleName}
+                      onChange={(v) => upF("fontScaleName", v)}
+                      formatLabel={(v) => `×${v.toFixed(2)}`}
+                    />
+                    <FDRange
+                      label="Title / role"
+                      min={FONT_SCALE_RANGE.min}
+                      max={FONT_SCALE_RANGE.max}
+                      step={FONT_SCALE_RANGE.step}
+                      value={front.fontScaleTitle}
+                      onChange={(v) => upF("fontScaleTitle", v)}
+                      formatLabel={(v) => `×${v.toFixed(2)}`}
+                    />
+                    <FDRange
+                      label="Contact labels (TEL · EMAIL)"
+                      min={FONT_SCALE_RANGE.min}
+                      max={FONT_SCALE_RANGE.max}
+                      step={FONT_SCALE_RANGE.step}
+                      value={front.fontScaleContactLabel}
+                      onChange={(v) => upF("fontScaleContactLabel", v)}
+                      formatLabel={(v) => `×${v.toFixed(2)}`}
+                    />
+                    <FDRange
+                      label="Phone & email"
+                      min={FONT_SCALE_RANGE.min}
+                      max={FONT_SCALE_RANGE.max}
+                      step={FONT_SCALE_RANGE.step}
+                      value={front.fontScaleContactValue}
+                      onChange={(v) => upF("fontScaleContactValue", v)}
+                      formatLabel={(v) => `×${v.toFixed(2)}`}
+                    />
+                  </div>
+                  {front.fontScaleName !== factoryFront.fontScaleName ||
+                  front.fontScaleTitle !== factoryFront.fontScaleTitle ||
+                  front.fontScaleContactLabel !== factoryFront.fontScaleContactLabel ||
+                  front.fontScaleContactValue !== factoryFront.fontScaleContactValue ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        patchSelectedFront((f) => ({
+                          ...f,
+                          fontScaleName: factoryFront.fontScaleName,
+                          fontScaleTitle: factoryFront.fontScaleTitle,
+                          fontScaleContactLabel: factoryFront.fontScaleContactLabel,
+                          fontScaleContactValue: factoryFront.fontScaleContactValue,
+                        }))
+                      }
+                      className="mt-2 text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+                    >
+                      Reset front type scales
+                    </button>
+                  ) : null}
+                </div>
 
                 <Divider />
 
@@ -485,8 +618,14 @@ export default function Editor() {
                   onOffsetX={(v) => upF("logoOffsetX", v)}
                   onOffsetY={(v) => upF("logoOffsetY", v)}
                   onResetPosition={() =>
-                    setFront((f) => ({ ...f, logoOffsetX: 0, logoOffsetY: 0 }))
+                    patchSelectedFront((f) => ({
+                      ...f,
+                      logoOffsetX: factoryFront.logoOffsetX,
+                      logoOffsetY: factoryFront.logoOffsetY,
+                    }))
                   }
+                  baselineOffsetX={factoryFront.logoOffsetX}
+                  baselineOffsetY={factoryFront.logoOffsetY}
                 />
 
                 <Divider />
@@ -497,7 +636,7 @@ export default function Editor() {
                     options={FRONT_LAYOUTS}
                     value={front.layout}
                     onChange={(v) =>
-                      setFront((f) => {
+                      patchSelectedFront((f) => {
                         const prevDef = defaultNameTitleGap(f.layout);
                         const nextDef = defaultNameTitleGap(v);
                         const preserveGap = f.nameTitleGap !== prevDef;
@@ -515,7 +654,8 @@ export default function Editor() {
 
                 <PositioningPanel
                   front={front}
-                  onChange={(patch) => setFront((f) => ({ ...f, ...patch }))}
+                  personId={selectedPersonId}
+                  onChange={(patch) => patchSelectedFront((f) => ({ ...f, ...patch }))}
                 />
 
                 <Divider />
@@ -552,8 +692,77 @@ export default function Editor() {
                 <Divider />
 
                 <div>
+                  <SectionLabel>Back type sizes</SectionLabel>
+                  <p className="text-[8px] text-[rgba(255,208,0,0.38)] leading-snug mb-2">
+                    Sizes are in SVG units (same space as the card). QR caption is used under codes on Two QRs, Logo +
+                    QR, and Type layouts. Display is the large “FOLK DEVILS” line on Type led. Minimal link is the label
+                    beside small QRs.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <FDRange
+                      label="QR caption"
+                      min={6}
+                      max={22}
+                      step={1}
+                      value={back.fontQrCaption}
+                      onChange={(v) => upB("fontQrCaption", v)}
+                    />
+                    <FDRange
+                      label="Type display (FOLK DEVILS)"
+                      min={20}
+                      max={96}
+                      step={1}
+                      value={back.fontBackDisplay}
+                      onChange={(v) => upB("fontBackDisplay", v)}
+                    />
+                    <FDRange
+                      label="Minimal link"
+                      min={9}
+                      max={32}
+                      step={1}
+                      value={back.fontMinimalLink}
+                      onChange={(v) => upB("fontMinimalLink", v)}
+                    />
+                  </div>
+                  {back.fontQrCaption !== BACK_FONT_CAPTION_DEFAULT ||
+                  back.fontBackDisplay !== BACK_FONT_DISPLAY_DEFAULT ||
+                  back.fontMinimalLink !== BACK_FONT_MINIMAL_DEFAULT ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setBack((b) => ({
+                          ...b,
+                          fontQrCaption: BACK_FONT_CAPTION_DEFAULT,
+                          fontBackDisplay: BACK_FONT_DISPLAY_DEFAULT,
+                          fontMinimalLink: BACK_FONT_MINIMAL_DEFAULT,
+                        }))
+                      }
+                      className="mt-2 text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+                    >
+                      Reset back type sizes
+                    </button>
+                  ) : null}
+                </div>
+
+                <Divider />
+
+                <div>
                   <SectionLabel>Layout</SectionLabel>
-                  <ChipRow options={BACK_LAYOUTS} value={back.layout} onChange={(v) => upB("layout", v)} />
+                  <ChipRow
+                    options={BACK_LAYOUTS}
+                    value={back.layout}
+                    onChange={(v) => {
+                      if (v === "one_qr") {
+                        setBack((b) => ({
+                          ...b,
+                          layout: "one_qr",
+                          qrLinkIds: b.qrLinkIds.length ? [b.qrLinkIds[0]] : ["main"],
+                        }));
+                      } else {
+                        upB("layout", v);
+                      }
+                    }}
+                  />
                 </div>
 
                 <Divider />
@@ -635,6 +844,7 @@ export default function Editor() {
                 <QrLinksManager
                   links={back.qrLinks}
                   selectedIds={back.qrLinkIds}
+                  singleSelect={back.layout === "one_qr"}
                   onChange={(links, selectedIds) =>
                     setBack((b) => ({ ...b, qrLinks: links, qrLinkIds: selectedIds }))
                   }
@@ -662,6 +872,8 @@ function LogoPickerBlock({
   onOffsetX,
   onOffsetY,
   onResetPosition,
+  baselineOffsetX = 0,
+  baselineOffsetY = 0,
 }: {
   logo: LogoId;
   logoScale: number;
@@ -672,8 +884,10 @@ function LogoPickerBlock({
   onOffsetX: (n: number) => void;
   onOffsetY: (n: number) => void;
   onResetPosition: () => void;
+  baselineOffsetX?: number;
+  baselineOffsetY?: number;
 }) {
-  const hasOffset = logoOffsetX !== 0 || logoOffsetY !== 0;
+  const hasOffset = logoOffsetX !== baselineOffsetX || logoOffsetY !== baselineOffsetY;
   return (
     <div>
       <SectionLabel>Logo</SectionLabel>
@@ -775,16 +989,17 @@ function formatSigned(v: number): string {
 /** Text-positioning controls. One shared X slider slides the whole column;
  *  name + title share one Y nudge; a separate gap slider sets space between
  *  them (where the layout uses a vertical name→title stack). Contact has
- *  its own Y nudge plus TEL/EMAIL row gap for stack layouts. Collapsible. */
+ *  its own Y nudge plus TEL/EMAIL row gap for stack layouts. */
 function PositioningPanel({
   front,
+  personId,
   onChange,
 }: {
   front: FrontState;
+  personId: number;
   onChange: (patch: Partial<FrontState>) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const gapDefault = defaultNameTitleGap(front.layout);
+  const fb = defaultFrontForPerson(personId);
   const usesNameTitleGap =
     front.layout === "stack" ||
     front.layout === "stack_logo_left" ||
@@ -792,44 +1007,28 @@ function PositioningPanel({
     front.layout === "centered" ||
     front.layout === "bold";
   const dirty =
-    front.textOffsetX !== 0 ||
-    front.nameTitleBlockOffsetY !== 0 ||
-    front.contactOffsetY !== 0 ||
-    front.contactTelEmailGap !== CONTACT_TEL_EMAIL_GAP_DEFAULT ||
-    (usesNameTitleGap && front.nameTitleGap !== gapDefault);
+    front.textOffsetX !== fb.textOffsetX ||
+    front.nameTitleBlockOffsetY !== fb.nameTitleBlockOffsetY ||
+    front.contactOffsetY !== fb.contactOffsetY ||
+    front.contactTelEmailGap !== fb.contactTelEmailGap ||
+    (usesNameTitleGap && front.nameTitleGap !== fb.nameTitleGap);
 
   const reset = () =>
     onChange({
-      textOffsetX: 0,
-      nameTitleBlockOffsetY: 0,
-      nameTitleGap: defaultNameTitleGap(front.layout),
-      contactOffsetY: 0,
-      contactTelEmailGap: CONTACT_TEL_EMAIL_GAP_DEFAULT,
+      textOffsetX: fb.textOffsetX,
+      nameTitleBlockOffsetY: fb.nameTitleBlockOffsetY,
+      nameTitleGap: fb.nameTitleGap,
+      contactOffsetY: fb.contactOffsetY,
+      contactTelEmailGap: fb.contactTelEmailGap,
     });
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between group"
-        aria-expanded={open}
-      >
-        <SectionLabel mb={0}>
-          Text position{dirty ? <span className="text-[#ffd000]"> · edited</span> : null}
-        </SectionLabel>
-        <span
-          className={`text-[11px] text-[rgba(255,208,0,0.45)] group-hover:text-[#ffd000] transition ${
-            open ? "rotate-180" : ""
-          }`}
-          aria-hidden
-        >
-          ▾
-        </span>
-      </button>
+      <SectionLabel>
+        Text position{dirty ? <span className="text-[#ffd000]"> · edited</span> : null}
+      </SectionLabel>
 
-      {open ? (
-        <div className="mt-3 flex flex-col gap-3">
+      <div className="mt-3 flex flex-col gap-3">
           <FDRange
             label="Column · X (shifts all text)"
             min={-TEXT_OFFSET_RANGE.x}
@@ -891,8 +1090,7 @@ function PositioningPanel({
               Reset all text positions
             </button>
           ) : null}
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }
@@ -1015,10 +1213,13 @@ function TextColorBlock({
 function QrLinksManager({
   links,
   selectedIds,
+  singleSelect,
   onChange,
 }: {
   links: QrLink[];
   selectedIds: string[];
+  /** When true (One QR layout), only one link can be active at a time. */
+  singleSelect?: boolean;
   onChange: (links: QrLink[], selectedIds: string[]) => void;
 }) {
   const updateLink = (id: string, patch: Partial<QrLink>) => {
@@ -1029,6 +1230,11 @@ function QrLinksManager({
   };
 
   const toggle = (id: string) => {
+    if (singleSelect) {
+      if (selectedIds.includes(id) && selectedIds.length === 1) return;
+      onChange(links, [id]);
+      return;
+    }
     const has = selectedIds.includes(id);
     const next = has ? selectedIds.filter((x) => x !== id) : [...selectedIds, id];
     if (next.length === 0) return; /* always keep at least one selected */
@@ -1038,7 +1244,11 @@ function QrLinksManager({
   const addLink = () => {
     const id = `link_${Date.now().toString(36)}`;
     const next: QrLink = { id, label: "New link", url: "https://" };
-    onChange([...links, next], [...selectedIds, id]);
+    if (singleSelect) {
+      onChange([...links, next], [id]);
+    } else {
+      onChange([...links, next], [...selectedIds, id]);
+    }
   };
 
   const deleteLink = (id: string) => {

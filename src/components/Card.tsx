@@ -4,9 +4,16 @@ import { forwardRef, useId } from "react";
 import {
   BLEED,
   clampContactTelEmailGap,
+  clampFontBackDisplay,
+  clampFontMinimalLink,
+  clampFontQrCaption,
   clampNameTitleGap,
   COLORS,
   DEFAULT_QR_LINKS,
+  frontFontContactLabelPx,
+  frontFontContactValuePx,
+  frontFontNamePx,
+  frontFontTitlePx,
   LOGOS,
   SAFE_INSET,
   VB_H,
@@ -188,6 +195,11 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
   const titleTx = `translate(${tx}, ${blockY})`;
   const contactTx = `translate(${tx}, ${fs.contactOffsetY ?? 0})`;
   const nameTitleGap = clampNameTitleGap(fs.nameTitleGap);
+  const layout = fs.layout;
+  const fzName = frontFontNamePx(layout, fs.fontScaleName);
+  const fzTitle = frontFontTitlePx(layout, fs.fontScaleTitle);
+  const fzCL = frontFontContactLabelPx(layout, fs.fontScaleContactLabel);
+  const fzCV = frontFontContactValuePx(layout, fs.fontScaleContactValue);
 
   /** Shared stack column (name, title, contact) that can anchor left or right,
    *  and stack either vertically distributed (full card height, like the classic
@@ -243,7 +255,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={nameX}
             y={nameY}
-            fontSize={34}
+            fontSize={fzName}
             fontWeight={700}
             fill={textFill}
             textAnchor={textAnchor}
@@ -256,7 +268,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={nameX}
             y={titleY}
-            fontSize={11}
+            fontSize={fzTitle}
             fontWeight={600}
             fill={subFill}
             letterSpacing="0.14em"
@@ -270,7 +282,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={labelX}
             y={contactTopY}
-            fontSize={9}
+            fontSize={fzCL}
             fontWeight={700}
             fill={subFill}
             letterSpacing="0.14em"
@@ -281,7 +293,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={valueX}
             y={contactTopY}
-            fontSize={13}
+            fontSize={fzCV}
             fill={phoneFill}
             textAnchor={textAnchor}
           >
@@ -290,7 +302,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={labelX}
             y={contactBottomY}
-            fontSize={9}
+            fontSize={fzCL}
             fontWeight={700}
             fill={subFill}
             letterSpacing="0.14em"
@@ -301,7 +313,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={valueX}
             y={contactBottomY}
-            fontSize={13}
+            fontSize={fzCV}
             fill={emailFill}
             textAnchor={textAnchor}
           >
@@ -376,7 +388,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={VB_W / 2}
             y={VB_H / 2 + 6}
-            fontSize={28}
+            fontSize={fzName}
             fontWeight={700}
             fill={textFill}
             textAnchor="middle"
@@ -388,7 +400,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={VB_W / 2}
             y={VB_H / 2 + 6 + nameTitleGap}
-            fontSize={10}
+            fontSize={fzTitle}
             fontWeight={600}
             fill={subFill}
             letterSpacing="0.16em"
@@ -401,7 +413,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={VB_W / 2 - 12}
             y={CONTENT_Y + CONTENT_H - 20}
-            fontSize={12}
+            fontSize={fzCV}
             fill={phoneFill}
             textAnchor="end"
           >
@@ -410,7 +422,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={VB_W / 2 + 12}
             y={CONTENT_Y + CONTENT_H - 20}
-            fontSize={12}
+            fontSize={fzCV}
             fill={emailFill}
           >
             {person.email}
@@ -426,7 +438,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X}
             y={CONTENT_Y + CONTENT_H * 0.58}
-            fontSize={56}
+            fontSize={fzName}
             fontWeight={900}
             fill={textFill}
             letterSpacing="-0.02em"
@@ -438,7 +450,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X}
             y={CONTENT_Y + CONTENT_H * 0.58 + nameTitleGap}
-            fontSize={10}
+            fontSize={fzTitle}
             fontWeight={700}
             fill={subFill}
             letterSpacing="0.14em"
@@ -450,7 +462,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X}
             y={CONTENT_Y + CONTENT_H - 12}
-            fontSize={12}
+            fontSize={fzCV}
             fill={phoneFill}
           >
             {person.phone}
@@ -458,7 +470,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X + CONTENT_W * 0.5}
             y={CONTENT_Y + CONTENT_H - 12}
-            fontSize={12}
+            fontSize={fzCV}
             fill={emailFill}
           >
             {person.email}
@@ -473,7 +485,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X}
             y={CONTENT_Y + 28}
-            fontSize={28}
+            fontSize={fzName}
             fontWeight={700}
             fill={textFill}
           >
@@ -485,7 +497,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X}
             y={CONTENT_Y + CONTENT_H - 20}
-            fontSize={10}
+            fontSize={fzTitle}
             fontWeight={700}
             fill={subFill}
             letterSpacing="0.14em"
@@ -497,7 +509,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X + CONTENT_W}
             y={CONTENT_Y + CONTENT_H - 32}
-            fontSize={12}
+            fontSize={fzCV}
             fill={phoneFill}
             textAnchor="end"
           >
@@ -506,7 +518,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X + CONTENT_W}
             y={CONTENT_Y + CONTENT_H - 14}
-            fontSize={12}
+            fontSize={fzCV}
             fill={emailFill}
             textAnchor="end"
           >
@@ -523,7 +535,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X + CONTENT_W}
             y={CONTENT_Y + 28}
-            fontSize={28}
+            fontSize={fzName}
             fontWeight={700}
             fill={textFill}
             textAnchor="end"
@@ -535,7 +547,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           <Txt
             x={CONTENT_X + CONTENT_W}
             y={CONTENT_Y + CONTENT_H - 20}
-            fontSize={10}
+            fontSize={fzTitle}
             fontWeight={700}
             fill={subFill}
             letterSpacing="0.14em"
@@ -545,10 +557,10 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           </Txt>
         </g>
         <g transform={contactTx}>
-          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 32} fontSize={12} fill={phoneFill}>
+          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 32} fontSize={fzCV} fill={phoneFill}>
             {person.phone}
           </Txt>
-          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 14} fontSize={12} fill={emailFill}>
+          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 14} fontSize={fzCV} fill={emailFill}>
             {person.email}
           </Txt>
         </g>
@@ -596,6 +608,9 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
     .map((id) => allLinks.find((l) => l.id === id))
     .filter(Boolean) as typeof allLinks;
   const effectiveLinks = selected.length ? selected : allLinks.slice(0, 2);
+  const fzCap = clampFontQrCaption(bs.fontQrCaption);
+  const fzDisp = clampFontBackDisplay(bs.fontBackDisplay);
+  const fzMin = clampFontMinimalLink(bs.fontMinimalLink);
 
   /* Helper so every layout renders the QR with the same design props. */
   const qrDesign = {
@@ -659,8 +674,31 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
     );
   };
 
-  type Variant = "two_qr" | "logo_qr" | "type" | "minimal";
+  type Variant = "one_qr" | "two_qr" | "logo_qr" | "type" | "minimal";
   const layouts: Record<Variant, React.ReactNode> = {
+    one_qr: (() => {
+      const link = selected[0] ?? allLinks[0];
+      const qrSize = 200;
+      const x = (VB_W - qrSize) / 2;
+      const topY = (VB_H - qrSize) / 2 - 10;
+      return (
+        <g key={link.id}>
+          <Qr link={link} x={x} y={topY} size={qrSize} />
+          <Txt
+            x={VB_W / 2}
+            y={topY + qrSize + 28}
+            fontSize={fzCap}
+            fontWeight={700}
+            fill={subFill}
+            letterSpacing="0.14em"
+            textAnchor="middle"
+          >
+            {link.label.toUpperCase()}
+          </Txt>
+        </g>
+      );
+    })(),
+
     two_qr: (() => {
       const qrSize = 170;
       const gap = 48;
@@ -675,7 +713,7 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
               <Txt
                 x={startX + i * (qrSize + gap) + qrSize / 2}
                 y={topY + qrSize + 28}
-                fontSize={10}
+                fontSize={fzCap}
                 fontWeight={700}
                 fill={subFill}
                 letterSpacing="0.14em"
@@ -708,7 +746,7 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
               <Txt
                 x={startX + i * (qrSize + gap) + qrSize / 2}
                 y={CONTENT_Y + 90 + qrSize + 22}
-                fontSize={9}
+                fontSize={fzCap}
                 fontWeight={700}
                 fill={subFill}
                 letterSpacing="0.12em"
@@ -732,7 +770,7 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
           <Txt
             x={VB_W / 2}
             y={CONTENT_Y + 50}
-            fontSize={54}
+            fontSize={fzDisp}
             fontWeight={900}
             fill={textFill}
             letterSpacing="-0.02em"
@@ -751,7 +789,7 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
               <Txt
                 x={startX + i * (qrSize + gap) + qrSize / 2}
                 y={CONTENT_Y + 106 + qrSize + 22}
-                fontSize={9}
+                fontSize={fzCap}
                 fontWeight={700}
                 fill={subFill}
                 letterSpacing="0.12em"
@@ -781,7 +819,7 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
               <Txt
                 x={CONTENT_X + qrSize + 18}
                 y={startY + i * (qrSize + 16) + qrSize / 2 + 4}
-                fontSize={16}
+                fontSize={fzMin}
                 fontWeight={600}
                 fill={textFill}
               >
