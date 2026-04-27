@@ -574,15 +574,17 @@ export default function Editor() {
                       onChange={(v) => upF("fontScaleContactLabel", v)}
                       formatLabel={(v) => `×${v.toFixed(2)}`}
                     />
-                    <FDRange
-                      label="Phone & email"
-                      min={FONT_SCALE_RANGE.min}
-                      max={FONT_SCALE_RANGE.max}
-                      step={FONT_SCALE_RANGE.step}
-                      value={front.fontScaleContactValue}
-                      onChange={(v) => upF("fontScaleContactValue", v)}
-                      formatLabel={(v) => `×${v.toFixed(2)}`}
-                    />
+                    <div className="pt-2">
+                      <FDRange
+                        label="Phone & email"
+                        min={FONT_SCALE_RANGE.min}
+                        max={FONT_SCALE_RANGE.max}
+                        step={FONT_SCALE_RANGE.step}
+                        value={front.fontScaleContactValue}
+                        onChange={(v) => upF("fontScaleContactValue", v)}
+                        formatLabel={(v) => `×${v.toFixed(2)}`}
+                      />
+                    </div>
                   </div>
                   {front.fontScaleName !== factoryFront.fontScaleName ||
                   front.fontScaleTitle !== factoryFront.fontScaleTitle ||

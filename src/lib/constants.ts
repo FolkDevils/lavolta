@@ -492,8 +492,8 @@ export const DEFAULT_FRONT: FrontState = {
   contactTelEmailGap: CONTACT_TEL_EMAIL_GAP_DEFAULT,
   fontScaleName: clampFontScale(1),
   fontScaleTitle: clampFontScale(1),
-  fontScaleContactLabel: clampFontScale(1),
-  fontScaleContactValue: clampFontScale(1),
+  fontScaleContactLabel: clampFontScale(0.9),
+  fontScaleContactValue: clampFontScale(1.1),
   layout: "stack_logo_right",
   pat: { ...DEFAULT_PATTERN },
 };
