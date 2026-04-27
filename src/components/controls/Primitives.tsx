@@ -69,6 +69,11 @@ export function FDRange({
   formatLabel,
   disabled = false,
 }: FDRangeProps) {
+  /* Keep the native range input inside [min,max] so the thumb never sits in a dead zone
+   * when stored state is briefly out of sync with clamped render bounds. */
+  const clamped = Math.min(max, Math.max(min, value));
+  const emit = (raw: number) => onChange(Math.min(max, Math.max(min, raw)));
+
   return (
     <div className={`flex flex-col gap-1 ${disabled ? "opacity-45" : ""}`}>
       <div className="flex justify-between items-baseline gap-2">
@@ -76,7 +81,7 @@ export function FDRange({
           {label}
         </span>
         <span className="text-[10px] font-bold text-[#ffd000] tabular-nums whitespace-nowrap">
-          {formatLabel ? formatLabel(value) : `${value}${unit}`}
+          {formatLabel ? formatLabel(clamped) : `${clamped}${unit}`}
         </span>
       </div>
       <input
@@ -84,9 +89,9 @@ export function FDRange({
         min={min}
         max={max}
         step={step}
-        value={value}
+        value={clamped}
         disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => emit(Number(e.target.value))}
         className={`fd-range ${disabled ? "cursor-not-allowed" : ""}`}
       />
     </div>

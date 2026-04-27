@@ -7,9 +7,15 @@ import {
   BACK_FONT_CAPTION_DEFAULT,
   BACK_FONT_DISPLAY_DEFAULT,
   BACK_FONT_MINIMAL_DEFAULT,
+  BACK_FONT_DISPLAY_SLIDER_RANGE,
+  BACK_FONT_MINIMAL_LINK_SLIDER_RANGE,
+  BACK_FONT_QR_CAPTION_SLIDER_RANGE,
   buildBackByPersonIdFromSaved,
   buildFrontByPersonIdFromSaved,
   clampContactTelEmailGap,
+  clampFontBackDisplay,
+  clampFontMinimalLink,
+  clampFontQrCaption,
   clampFontScale,
   clampLogoOffsetX,
   clampLogoOffsetY,
@@ -20,18 +26,23 @@ import {
   CONTACT_TEL_EMAIL_GAP_DEFAULT,
   CONTACT_TEL_EMAIL_GAP_RANGE,
   defaultNameTitleGap,
-  FONT_SCALE_RANGE,
+  frontFontContactLabelPx,
+  frontFontContactValuePx,
+  frontFontNamePx,
+  frontFontTitlePx,
   NAME_TITLE_GAP_RANGE,
   COLORS,
   DEFAULT_PEOPLE,
   defaultBackForPerson,
   defaultFrontForPerson,
+  effectiveFontScaleRangeFor,
   FD_SOLID_PALETTE,
   FRONT_LAYOUTS,
   LOGO_OFFSET_RANGE,
   LOGO_SCALE_RANGE,
   LOGOS,
   normalizeColorValue,
+  normalizeFrontFontScalesForLayout,
   normalizeFrontLayout,
   normalizeLogoId,
   QR_BODY_OPTIONS,
@@ -133,6 +144,16 @@ export default function Editor() {
     [frontByPersonId, selectedPersonId, factoryFront],
   );
 
+  const fontScaleSliderRanges = useMemo(
+    () => ({
+      name: effectiveFontScaleRangeFor(front.layout, frontFontNamePx),
+      title: effectiveFontScaleRangeFor(front.layout, frontFontTitlePx),
+      contactLabel: effectiveFontScaleRangeFor(front.layout, frontFontContactLabelPx),
+      contactValue: effectiveFontScaleRangeFor(front.layout, frontFontContactValuePx),
+    }),
+    [front.layout],
+  );
+
   const factoryBack = useMemo(
     () => defaultBackForPerson(selectedPersonId),
     [selectedPersonId],
@@ -205,6 +226,33 @@ export default function Editor() {
       /* ignore */
     }
   }, [hydrated, people, frontByPersonId, backByPersonId, selectedId]);
+
+  /* Sync stored font scales to the effective px range (e.g. after deploy or layout change). */
+  useEffect(() => {
+    if (!hydrated) return;
+    const id = selectedPersonId;
+    setFrontByPersonId((prev) => {
+      const cur = prev[id] ?? defaultFrontForPerson(id);
+      const n = normalizeFrontFontScalesForLayout(cur);
+      if (
+        n.fontScaleName === cur.fontScaleName &&
+        n.fontScaleTitle === cur.fontScaleTitle &&
+        n.fontScaleContactLabel === cur.fontScaleContactLabel &&
+        n.fontScaleContactValue === cur.fontScaleContactValue
+      ) {
+        return prev;
+      }
+      return { ...prev, [id]: n };
+    });
+  }, [
+    hydrated,
+    selectedPersonId,
+    front.layout,
+    front.fontScaleName,
+    front.fontScaleTitle,
+    front.fontScaleContactLabel,
+    front.fontScaleContactValue,
+  ]);
 
   const person = useMemo(
     () => people.find((p) => p.id === selectedId) ?? people[0],
@@ -542,27 +590,27 @@ export default function Editor() {
                   <div className="flex flex-col gap-2">
                     <FDRange
                       label="Name"
-                      min={FONT_SCALE_RANGE.min}
-                      max={FONT_SCALE_RANGE.max}
-                      step={FONT_SCALE_RANGE.step}
+                      min={fontScaleSliderRanges.name.min}
+                      max={fontScaleSliderRanges.name.max}
+                      step={fontScaleSliderRanges.name.step}
                       value={front.fontScaleName}
                       onChange={(v) => upF("fontScaleName", v)}
                       formatLabel={(v) => `×${v.toFixed(2)}`}
                     />
                     <FDRange
                       label="Title / role"
-                      min={FONT_SCALE_RANGE.min}
-                      max={FONT_SCALE_RANGE.max}
-                      step={FONT_SCALE_RANGE.step}
+                      min={fontScaleSliderRanges.title.min}
+                      max={fontScaleSliderRanges.title.max}
+                      step={fontScaleSliderRanges.title.step}
                       value={front.fontScaleTitle}
                       onChange={(v) => upF("fontScaleTitle", v)}
                       formatLabel={(v) => `×${v.toFixed(2)}`}
                     />
                     <FDRange
                       label="Contact labels (TEL · EMAIL)"
-                      min={FONT_SCALE_RANGE.min}
-                      max={FONT_SCALE_RANGE.max}
-                      step={FONT_SCALE_RANGE.step}
+                      min={fontScaleSliderRanges.contactLabel.min}
+                      max={fontScaleSliderRanges.contactLabel.max}
+                      step={fontScaleSliderRanges.contactLabel.step}
                       value={front.fontScaleContactLabel}
                       onChange={(v) => upF("fontScaleContactLabel", v)}
                       formatLabel={(v) => `×${v.toFixed(2)}`}
@@ -570,9 +618,9 @@ export default function Editor() {
                     <div className="pt-2">
                       <FDRange
                         label="Phone & email"
-                        min={FONT_SCALE_RANGE.min}
-                        max={FONT_SCALE_RANGE.max}
-                        step={FONT_SCALE_RANGE.step}
+                        min={fontScaleSliderRanges.contactValue.min}
+                        max={fontScaleSliderRanges.contactValue.max}
+                        step={fontScaleSliderRanges.contactValue.step}
                         value={front.fontScaleContactValue}
                         onChange={(v) => upF("fontScaleContactValue", v)}
                         formatLabel={(v) => `×${v.toFixed(2)}`}
@@ -635,11 +683,11 @@ export default function Editor() {
                         const prevDef = defaultNameTitleGap(f.layout);
                         const nextDef = defaultNameTitleGap(v);
                         const preserveGap = f.nameTitleGap !== prevDef;
-                        return {
+                        return normalizeFrontFontScalesForLayout({
                           ...f,
                           layout: v,
                           nameTitleGap: preserveGap ? f.nameTitleGap : clampNameTitleGap(nextDef),
-                        };
+                        });
                       })
                     }
                   />
@@ -696,27 +744,27 @@ export default function Editor() {
                   <div className="flex flex-col gap-2">
                     <FDRange
                       label="QR caption"
-                      min={6}
-                      max={22}
-                      step={1}
+                      min={BACK_FONT_QR_CAPTION_SLIDER_RANGE.min}
+                      max={BACK_FONT_QR_CAPTION_SLIDER_RANGE.max}
+                      step={BACK_FONT_QR_CAPTION_SLIDER_RANGE.step}
                       value={back.fontQrCaption}
-                      onChange={(v) => upB("fontQrCaption", v)}
+                      onChange={(v) => upB("fontQrCaption", clampFontQrCaption(v))}
                     />
                     <FDRange
                       label="Type display (FOLK DEVILS)"
-                      min={20}
-                      max={96}
-                      step={1}
+                      min={BACK_FONT_DISPLAY_SLIDER_RANGE.min}
+                      max={BACK_FONT_DISPLAY_SLIDER_RANGE.max}
+                      step={BACK_FONT_DISPLAY_SLIDER_RANGE.step}
                       value={back.fontBackDisplay}
-                      onChange={(v) => upB("fontBackDisplay", v)}
+                      onChange={(v) => upB("fontBackDisplay", clampFontBackDisplay(v))}
                     />
                     <FDRange
                       label="Minimal link"
-                      min={9}
-                      max={32}
-                      step={1}
+                      min={BACK_FONT_MINIMAL_LINK_SLIDER_RANGE.min}
+                      max={BACK_FONT_MINIMAL_LINK_SLIDER_RANGE.max}
+                      step={BACK_FONT_MINIMAL_LINK_SLIDER_RANGE.step}
                       value={back.fontMinimalLink}
-                      onChange={(v) => upB("fontMinimalLink", v)}
+                      onChange={(v) => upB("fontMinimalLink", clampFontMinimalLink(v))}
                     />
                   </div>
                   {back.fontQrCaption !== BACK_FONT_CAPTION_DEFAULT ||

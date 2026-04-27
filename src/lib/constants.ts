@@ -262,23 +262,79 @@ export function frontFontContactValuePx(layout: FrontLayout, scale: unknown): nu
   );
 }
 
+/** Sub-range of `FONT_SCALE_RANGE` where each step changes rendered px (layout-specific). */
+export function effectiveFontScaleRangeFor(
+  layout: FrontLayout,
+  pxFn: (layout: FrontLayout, scale: number) => number,
+): { min: number; max: number; step: number } {
+  const { min, max, step } = FONT_SCALE_RANGE;
+  const nSteps = Math.round((max - min) / step);
+  const sAt = (i: number) => Math.round((min + i * step) * 100) / 100;
+
+  const bot = pxFn(layout, sAt(0));
+  let iLo = 0;
+  for (let i = 1; i <= nSteps; i++) {
+    if (pxFn(layout, sAt(i)) > bot) {
+      iLo = i;
+      break;
+    }
+  }
+
+  const top = pxFn(layout, sAt(nSteps));
+  let iHi = nSteps;
+  for (let i = nSteps - 1; i >= 0; i--) {
+    if (pxFn(layout, sAt(i)) < top) {
+      iHi = i + 1;
+      break;
+    }
+  }
+
+  if (sAt(iHi) < sAt(iLo)) {
+    return { min, max, step };
+  }
+  return { min: sAt(iLo), max: sAt(iHi), step };
+}
+
+/** Pin stored font scales so every slider tick maps to a different on-card px size. */
+export function normalizeFrontFontScalesForLayout(f: FrontState): FrontState {
+  const rN = effectiveFontScaleRangeFor(f.layout, frontFontNamePx);
+  const rT = effectiveFontScaleRangeFor(f.layout, frontFontTitlePx);
+  const rCL = effectiveFontScaleRangeFor(f.layout, frontFontContactLabelPx);
+  const rCV = effectiveFontScaleRangeFor(f.layout, frontFontContactValuePx);
+  return {
+    ...f,
+    fontScaleName: Math.min(rN.max, Math.max(rN.min, clampFontScale(f.fontScaleName))),
+    fontScaleTitle: Math.min(rT.max, Math.max(rT.min, clampFontScale(f.fontScaleTitle))),
+    fontScaleContactLabel: Math.min(rCL.max, Math.max(rCL.min, clampFontScale(f.fontScaleContactLabel))),
+    fontScaleContactValue: Math.min(rCV.max, Math.max(rCV.min, clampFontScale(f.fontScaleContactValue))),
+  };
+}
+
 export const BACK_FONT_CAPTION_DEFAULT = 15; // ~6.75 pt (up from 4.50 pt)
 export const BACK_FONT_DISPLAY_DEFAULT = 54; // ~24.3 pt — already great
 export const BACK_FONT_MINIMAL_DEFAULT = 18; // ~8.10 pt (up from 7.20 pt)
 
+/** Editor slider bounds = print clamp bounds (no dead drag zone). */
+export const BACK_FONT_QR_CAPTION_SLIDER_RANGE = { min: 14, max: 24, step: 1 } as const;
+export const BACK_FONT_DISPLAY_SLIDER_RANGE = { min: 20, max: 96, step: 1 } as const;
+export const BACK_FONT_MINIMAL_LINK_SLIDER_RANGE = { min: 14, max: 34, step: 1 } as const;
+
 export function clampFontQrCaption(n: unknown): number {
+  const { min, max } = BACK_FONT_QR_CAPTION_SLIDER_RANGE;
   const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_CAPTION_DEFAULT;
-  return Math.round(Math.min(24, Math.max(14, x))); // 6.30–10.8 pt
+  return Math.round(Math.min(max, Math.max(min, x)));
 }
 
 export function clampFontBackDisplay(n: unknown): number {
+  const { min, max } = BACK_FONT_DISPLAY_SLIDER_RANGE;
   const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_DISPLAY_DEFAULT;
-  return Math.round(Math.min(96, Math.max(20, x)));
+  return Math.round(Math.min(max, Math.max(min, x)));
 }
 
 export function clampFontMinimalLink(n: unknown): number {
+  const { min, max } = BACK_FONT_MINIMAL_LINK_SLIDER_RANGE;
   const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_MINIMAL_DEFAULT;
-  return Math.round(Math.min(34, Math.max(14, x))); // 6.30–15.3 pt
+  return Math.round(Math.min(max, Math.max(min, x)));
 }
 
 /* Pixel dimensions at 300 DPI for raster export */
@@ -515,9 +571,11 @@ export const DEFAULT_FRONT: FrontState = {
 /** Ted = `DEFAULT_FRONT`. Andrew (2) & Avi (3) = centered layout + the tuned type/logo/text-position you specified. */
 export function defaultFrontForPerson(personId: number): FrontState {
   const ted: FrontState = { ...DEFAULT_FRONT, pat: { ...DEFAULT_FRONT.pat } };
-  if (personId === 1) return JSON.parse(JSON.stringify(ted)) as FrontState;
-  if (personId === 2 || personId === 3) {
-    return {
+  let out: FrontState;
+  if (personId === 1) {
+    out = JSON.parse(JSON.stringify(ted)) as FrontState;
+  } else if (personId === 2 || personId === 3) {
+    out = {
       ...ted,
       /* Andrew shares Ted’s flower defaults; Avi uses his own front flower recipe. */
       pat: personId === 3 ? { ...AVI_FRONT_FLOWER_PATTERN } : { ...ted.pat },
@@ -535,8 +593,10 @@ export function defaultFrontForPerson(personId: number): FrontState {
       fontScaleContactLabel: clampFontScale(1),
       fontScaleContactValue: clampFontScale(1.1),
     };
+  } else {
+    out = JSON.parse(JSON.stringify(ted)) as FrontState;
   }
-  return JSON.parse(JSON.stringify(ted)) as FrontState;
+  return normalizeFrontFontScalesForLayout(out);
 }
 
 /** Merge a partial saved front (including legacy Y offsets) into a full `FrontState`. */
@@ -574,7 +634,7 @@ export function migrateRawFront(
     layout,
     pat: patMerged,
   };
-  return {
+  const merged: FrontState = {
     ...m,
     logo: normalizeLogoId(m.logo),
     logoScale: clampLogoScale(m.logoScale),
@@ -595,6 +655,7 @@ export function migrateRawFront(
     phoneFill: m.phoneFill ?? null,
     emailFill: m.emailFill ?? null,
   };
+  return normalizeFrontFontScalesForLayout(merged);
 }
 
 export function buildFrontByPersonIdFromSaved(
