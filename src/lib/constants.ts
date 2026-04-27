@@ -462,13 +462,14 @@ export const FLOWER_SRCS: string[] = [
  *  matches `FLOWER_SRCS`. */
 export const FLOWER_SCALE: readonly number[] = [2.0, 1.0, 0.9];
 
+/** Shared factory pattern for Ted & Andrew (front + back): flowers 2 + 3 only. Avi uses `AVI_*_FLOWER_PATTERN`. */
 export const DEFAULT_PATTERN: PatternConfig = {
   on: true,
   f1: false,
   f2: true,
-  f3: false,
+  f3: true,
   density: 80,
-  size: 20,
+  size: 30,
   rot: 80,
   opacity: 20,
   seed: 4242,
@@ -508,8 +509,7 @@ export const DEFAULT_FRONT: FrontState = {
   fontScaleContactLabel: clampFontScale(0.9),
   fontScaleContactValue: clampFontScale(1.1),
   layout: "stack_logo_right",
-  /* Middle flower only (f2); density/size match global recipe; rot + opacity tuned for print. */
-  pat: { ...DEFAULT_PATTERN, rot: 360, opacity: 29 },
+  pat: { ...DEFAULT_PATTERN },
 };
 
 /** Ted = `DEFAULT_FRONT`. Andrew (2) & Avi (3) = centered layout + the tuned type/logo/text-position you specified. */
