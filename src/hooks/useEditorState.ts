@@ -1,0 +1,278 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  buildBackByPersonIdFromSaved,
+  buildFrontByPersonIdFromSaved,
+  DEFAULT_PEOPLE,
+  defaultBackForPerson,
+  defaultFrontForPerson,
+  normalizeFrontFontScalesForLayout,
+  STORAGE_KEY,
+} from "@/lib/constants";
+import type { BackState, FrontState, Person } from "@/lib/types";
+import { useExport } from "./useExport";
+
+/* ── Saved shape in localStorage ─────────────────────────────────── */
+type Saved = {
+  people: Person[];
+  front?: FrontState;
+  frontByPersonId?: Record<number, FrontState>;
+  back?: BackState;
+  backByPersonId?: Record<number, BackState>;
+  selectedId: number | undefined;
+};
+
+function initialFrontMap(): Record<number, FrontState> {
+  const m: Record<number, FrontState> = {};
+  for (const p of DEFAULT_PEOPLE) {
+    m[p.id] = JSON.parse(JSON.stringify(defaultFrontForPerson(p.id))) as FrontState;
+  }
+  return m;
+}
+
+function initialBackMap(): Record<number, BackState> {
+  const m: Record<number, BackState> = {};
+  for (const p of DEFAULT_PEOPLE) {
+    m[p.id] = JSON.parse(JSON.stringify(defaultBackForPerson(p.id))) as BackState;
+  }
+  return m;
+}
+
+/* ── Hook ─────────────────────────────────────────────────────────── */
+export function useEditorState() {
+  const [people, setPeople] = useState<Person[]>(DEFAULT_PEOPLE);
+  const [frontByPersonId, setFrontByPersonId] = useState<Record<number, FrontState>>(initialFrontMap);
+  const [backByPersonId, setBackByPersonId] = useState<Record<number, BackState>>(initialBackMap);
+  const [selectedId, setSelectedId] = useState<number | undefined>(DEFAULT_PEOPLE[0]?.id);
+  const [hydrated, setHydrated] = useState(false);
+  const [peopleListKey, setPeopleListKey] = useState(0);
+
+  /* ── Derived ──────────────────────────────────────────────────── */
+  const selectedPersonId = useMemo(
+    () => selectedId ?? people[0]?.id ?? 1,
+    [selectedId, people],
+  );
+
+  const person = useMemo(
+    () => people.find((p) => p.id === selectedId) ?? people[0],
+    [people, selectedId],
+  );
+
+  const exportState = useExport(person);
+
+  const factoryFront = useMemo(
+    () => defaultFrontForPerson(selectedPersonId),
+    [selectedPersonId],
+  );
+
+  const front = useMemo(
+    () => frontByPersonId[selectedPersonId] ?? factoryFront,
+    [frontByPersonId, selectedPersonId, factoryFront],
+  );
+
+  const factoryBack = useMemo(
+    () => defaultBackForPerson(selectedPersonId),
+    [selectedPersonId],
+  );
+
+  const back = useMemo(
+    () => backByPersonId[selectedPersonId] ?? factoryBack,
+    [backByPersonId, selectedPersonId, factoryBack],
+  );
+
+  /* ── Patching helpers ─────────────────────────────────────────── */
+  const patchSelectedFront = useCallback(
+    (fn: (f: FrontState) => FrontState) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setFrontByPersonId((prev) => ({
+        ...prev,
+        [id]: fn(prev[id] ?? defaultFrontForPerson(id)),
+      }));
+    },
+    [selectedId, people],
+  );
+
+  const updateFront = useCallback(
+    (patch: Partial<FrontState>) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setFrontByPersonId((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? defaultFrontForPerson(id)), ...patch },
+      }));
+    },
+    [selectedId, people],
+  );
+
+  const patchSelectedBack = useCallback(
+    (fn: (b: BackState) => BackState) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setBackByPersonId((prev) => ({
+        ...prev,
+        [id]: fn(prev[id] ?? defaultBackForPerson(id)),
+      }));
+    },
+    [selectedId, people],
+  );
+
+  const updateBack = useCallback(
+    (patch: Partial<BackState>) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setBackByPersonId((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? defaultBackForPerson(id)), ...patch },
+      }));
+    },
+    [selectedId, people],
+  );
+
+  /* ── People helpers ───────────────────────────────────────────── */
+  const addPerson = useCallback((p: Omit<Person, "id">) => {
+    const id = Date.now();
+    setPeople((v) => [...v, { ...p, id }]);
+    setFrontByPersonId((prev) => ({
+      ...prev,
+      [id]: JSON.parse(JSON.stringify(defaultFrontForPerson(id))) as FrontState,
+    }));
+    setBackByPersonId((prev) => ({
+      ...prev,
+      [id]: JSON.parse(JSON.stringify(defaultBackForPerson(id))) as BackState,
+    }));
+    setSelectedId(id);
+  }, []);
+
+  const updatePerson = useCallback((id: number, patch: Partial<Omit<Person, "id">>) => {
+    setPeople((v) => v.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  }, []);
+
+  const deletePerson = useCallback(
+    (id: number) => {
+      setPeople((v) => {
+        const next = v.filter((p) => p.id !== id);
+        if (selectedId === id) setSelectedId(next[0]?.id);
+        return next;
+      });
+      setFrontByPersonId((prev) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [id]: _omit, ...rest } = prev;
+        return rest;
+      });
+      setBackByPersonId((prev) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [id]: _omit2, ...rest } = prev;
+        return rest;
+      });
+    },
+    [selectedId],
+  );
+
+  /* ── Persistence — load once ──────────────────────────────────── */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<Saved>;
+        const peopleList = saved.people?.length ? saved.people : DEFAULT_PEOPLE;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (saved.people?.length) setPeople(saved.people);
+        setFrontByPersonId(buildFrontByPersonIdFromSaved(saved, peopleList));
+        setBackByPersonId(buildBackByPersonIdFromSaved(saved, peopleList));
+        if (saved.selectedId != null) setSelectedId(saved.selectedId);
+      }
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, []);
+
+  /* ── Persistence — save on change ────────────────────────────── */
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      const data: Saved = { people, frontByPersonId, backByPersonId, selectedId };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      /* ignore */
+    }
+  }, [hydrated, people, frontByPersonId, backByPersonId, selectedId]);
+
+  /* ── Sync font scales to effective px range after layout change ── */
+  useEffect(() => {
+    if (!hydrated) return;
+    const id = selectedPersonId;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFrontByPersonId((prev) => {
+      const cur = prev[id] ?? defaultFrontForPerson(id);
+      const n = normalizeFrontFontScalesForLayout(cur);
+      if (
+        n.fontScaleName === cur.fontScaleName &&
+        n.fontScaleTitle === cur.fontScaleTitle &&
+        n.fontScaleContactLabel === cur.fontScaleContactLabel &&
+        n.fontScaleContactValue === cur.fontScaleContactValue
+      ) {
+        return prev;
+      }
+      return { ...prev, [id]: n };
+    });
+  }, [
+    hydrated,
+    selectedPersonId,
+    front.layout,
+    front.fontScaleName,
+    front.fontScaleTitle,
+    front.fontScaleContactLabel,
+    front.fontScaleContactValue,
+  ]);
+
+  /* ── Clear all saved data ─────────────────────────────────────── */
+  const clearSavedData = () => {
+    if (
+      !window.confirm(
+        "Clear all saved settings, people, and card designs stored in this browser? This cannot be undone.",
+      )
+    )
+      return;
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    setPeople(JSON.parse(JSON.stringify(DEFAULT_PEOPLE)) as Person[]);
+    setFrontByPersonId(initialFrontMap());
+    setBackByPersonId(initialBackMap());
+    setSelectedId(DEFAULT_PEOPLE[0]?.id);
+    setPeopleListKey((k) => k + 1);
+    exportState.setExportError(null);
+  };
+
+  return {
+    /* state */
+    people,
+    front,
+    back,
+    person,
+    selectedId,
+    selectedPersonId,
+    factoryFront,
+    factoryBack,
+    hydrated,
+    peopleListKey,
+    /* export state (from useExport) */
+    ...exportState,
+    /* setters */
+    setSelectedId,
+    /* front mutations */
+    updateFront,
+    patchSelectedFront,
+    /* back mutations */
+    updateBack,
+    patchSelectedBack,
+    /* people mutations */
+    addPerson,
+    updatePerson,
+    deletePerson,
+    /* actions */
+    clearSavedData,
+  };
+}
+

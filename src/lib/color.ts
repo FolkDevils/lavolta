@@ -1,5 +1,5 @@
-import type { ColorDef } from "./constants";
-import { COLORS, FD_SOLID_PALETTE, QR_COLORS } from "./constants";
+import type { ColorDef } from "./palette";
+import { COLORS, FD_SOLID_PALETTE, QR_COLORS } from "./palette";
 
 /* ──────────────────────────────────────────────────────────
  * Color model

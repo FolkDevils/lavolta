@@ -39,13 +39,13 @@ export function Section({
   useEffect(() => {
     try {
       const saved = localStorage.getItem(KEY(id));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (saved === "1") setOpen(true);
       else if (saved === "0") setOpen(false);
     } catch {
       /* ignore */
     }
     /* Only read on mount / id change. */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
