@@ -509,7 +509,7 @@ export function defaultFrontForPerson(personId: number): FrontState {
       layout: "centered",
       logoScale: clampLogoScale(2),
       logoOffsetX: 0,
-      logoOffsetY: 20,
+      logoOffsetY: 12,
       textOffsetX: 0,
       nameTitleBlockOffsetY: 30,
       nameTitleGap: clampNameTitleGap(26),
