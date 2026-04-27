@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  BACK_FONT_CAPTION_DEFAULT,
-  BACK_FONT_DISPLAY_DEFAULT,
-  BACK_FONT_MINIMAL_DEFAULT,
+  applyBackLayoutDefaults,
   BACK_FONT_DISPLAY_SLIDER_RANGE,
   BACK_FONT_MINIMAL_LINK_SLIDER_RANGE,
   BACK_FONT_QR_CAPTION_SLIDER_RANGE,
@@ -40,14 +38,15 @@ type Props = {
 };
 
 export function BackPanel({ back, personId, onChange, onPatch }: Props) {
-  const factory = defaultBackForPerson(personId);
+  // Layout-aware + person-aware factory — see FrontPanel for rationale.
+  const factory = applyBackLayoutDefaults(defaultBackForPerson(personId), back.layout, personId);
 
   const currentLayout = BACK_LAYOUTS.find((l) => l.id === back.layout)?.name ?? back.layout;
 
   const typeDirty =
-    back.fontQrCaption !== BACK_FONT_CAPTION_DEFAULT ||
-    back.fontBackDisplay !== BACK_FONT_DISPLAY_DEFAULT ||
-    back.fontMinimalLink !== BACK_FONT_MINIMAL_DEFAULT;
+    back.fontQrCaption !== factory.fontQrCaption ||
+    back.fontBackDisplay !== factory.fontBackDisplay ||
+    back.fontMinimalLink !== factory.fontMinimalLink;
 
   const colorDirty = back.textFill !== factory.textFill || back.subTextFill !== factory.subTextFill;
 
@@ -64,17 +63,15 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
         <ChipRow
           options={BACK_LAYOUTS}
           value={back.layout}
-          onChange={(v) => {
-            if (v === "one_qr") {
-              onPatch((b) => ({
-                ...b,
-                layout: "one_qr",
-                qrLinkIds: b.qrLinkIds.length ? [b.qrLinkIds[0]] : ["main"],
-              }));
-            } else {
-              onChange({ layout: v });
-            }
-          }}
+          onChange={(v) =>
+            onPatch((b) => {
+              const next = applyBackLayoutDefaults(b, v, personId);
+              if (v === "one_qr") {
+                next.qrLinkIds = b.qrLinkIds.length ? [b.qrLinkIds[0]] : ["main"];
+              }
+              return next;
+            })
+          }
         />
       </Section>
 
@@ -134,9 +131,9 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
             onClick={() =>
               onPatch((b) => ({
                 ...b,
-                fontQrCaption: BACK_FONT_CAPTION_DEFAULT,
-                fontBackDisplay: BACK_FONT_DISPLAY_DEFAULT,
-                fontMinimalLink: BACK_FONT_MINIMAL_DEFAULT,
+                fontQrCaption: factory.fontQrCaption,
+                fontBackDisplay: factory.fontBackDisplay,
+                fontMinimalLink: factory.fontMinimalLink,
               }))
             }
             className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"

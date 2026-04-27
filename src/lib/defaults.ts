@@ -1,30 +1,30 @@
-import type { BackState, FrontState, PatternConfig, Person, QrLink } from "./types";
+import type { BackLayout, BackState, FrontLayout, FrontState, PatternConfig, Person, QrLink } from "./types";
 import {
   clampLogoOffsetX,
   clampLogoOffsetY,
   clampLogoScale,
   clampTextOffsetX,
   clampTextOffsetY,
-  DEFAULT_LOGO_OFFSET_X,
-  DEFAULT_LOGO_OFFSET_Y,
-  DEFAULT_LOGO_SCALE,
   normalizeColorValue,
   normalizeLogoId,
 } from "./palette";
-import { normalizeBackLayout, normalizeFrontLayout, qrStyleToDesignFields, normalizeQrBody, normalizeQrEye } from "./layouts";
 import {
-  BACK_FONT_CAPTION_DEFAULT,
-  BACK_FONT_DISPLAY_DEFAULT,
-  BACK_FONT_MINIMAL_DEFAULT,
+  normalizeBackLayout,
+  normalizeFrontLayout,
+  qrStyleToDesignFields,
+  normalizeQrBody,
+  normalizeQrEye,
+  resolveBackLayoutDefaults,
+  resolveFrontLayoutDefaults,
+} from "./layouts";
+import {
   clampContactTelEmailGap,
   clampFontBackDisplay,
   clampFontMinimalLink,
   clampFontQrCaption,
   clampFontScale,
   clampNameTitleGap,
-  CONTACT_TEL_EMAIL_GAP_DEFAULT,
   defaultNameTitleGap,
-  NAME_TITLE_GAP_DEFAULT_STACK,
   normalizeFrontFontScalesForLayout,
 } from "./typography";
 import { clampTextOffsetY as _clampY } from "./palette";
@@ -71,58 +71,73 @@ export const AVI_BACK_FLOWER_PATTERN: PatternConfig = {
 
 // ─── Front defaults ──────────────────────────────────────────────────────────
 
-/** Ted Royer — stack · logo right, tuned wordmark position, neutral type/position. */
-export const DEFAULT_FRONT: FrontState = {
-  color: "dark",
-  textFill: null,
-  subTextFill: "#ffffff",
-  phoneFill: null,
-  emailFill: null,
-  logo: "lg_full",
-  logoScale: clampLogoScale(DEFAULT_LOGO_SCALE),
-  logoOffsetX: -32,
-  logoOffsetY: 3,
-  textOffsetX: 0,
-  nameTitleBlockOffsetY: 0,
-  nameTitleGap: NAME_TITLE_GAP_DEFAULT_STACK,
-  contactOffsetY: 0,
-  contactTelEmailGap: CONTACT_TEL_EMAIL_GAP_DEFAULT,
-  fontScaleName: clampFontScale(1),
-  fontScaleTitle: clampFontScale(1),
-  fontScaleContactLabel: clampFontScale(0.9),
-  fontScaleContactValue: clampFontScale(1.1),
-  layout: "stack_logo_right",
-  pat: { ...DEFAULT_PATTERN },
-};
+/** Chrome fields that persist across layout switches (background, colors, logo id, pattern). */
+type FrontChrome = Pick<
+  FrontState,
+  "color" | "textFill" | "subTextFill" | "phoneFill" | "emailFill" | "logo" | "pat"
+>;
 
-/** Ted = DEFAULT_FRONT. Andrew (2) & Avi (3) = centered layout + tuned type/logo/text-position. */
+/** Shared background/chrome defaults — same across all layouts and (almost) all people. */
+function defaultFrontChrome(personId: number): FrontChrome {
+  return {
+    color: "dark",
+    textFill: null,
+    subTextFill: "#ffffff",
+    phoneFill: null,
+    emailFill: null,
+    logo: "lg_full",
+    pat: personId === 3 ? { ...AVI_FRONT_FLOWER_PATTERN } : { ...DEFAULT_PATTERN },
+  };
+}
+
+/** Build a full FrontState from chrome + a layout's effective element defaults
+ *  (global preset merged with any per-person override registered in layouts.ts). */
+function buildFrontForLayout(
+  chrome: FrontChrome,
+  layout: FrontLayout,
+  personId?: number,
+): FrontState {
+  const d = resolveFrontLayoutDefaults(layout, personId);
+  const state: FrontState = {
+    ...chrome,
+    layout,
+    logoScale: clampLogoScale(d.logoScale),
+    logoOffsetX: clampLogoOffsetX(d.logoOffsetX),
+    logoOffsetY: clampLogoOffsetY(d.logoOffsetY),
+    textOffsetX: clampTextOffsetX(d.textOffsetX),
+    nameTitleBlockOffsetY: clampTextOffsetY(d.nameTitleBlockOffsetY),
+    nameTitleGap: clampNameTitleGap(d.nameTitleGap),
+    contactOffsetY: clampTextOffsetY(d.contactOffsetY),
+    contactTelEmailGap: clampContactTelEmailGap(d.contactTelEmailGap),
+    fontScaleName: clampFontScale(d.fontScaleName),
+    fontScaleTitle: clampFontScale(d.fontScaleTitle),
+    fontScaleContactLabel: clampFontScale(d.fontScaleContactLabel),
+    fontScaleContactValue: clampFontScale(d.fontScaleContactValue),
+  };
+  return normalizeFrontFontScalesForLayout(state);
+}
+
+/** Per-person starting layout. Everyone uses the same element defaults; only pattern/layout differ. */
+function defaultFrontLayoutForPerson(personId: number): FrontLayout {
+  if (personId === 2 || personId === 3) return "centered";
+  return "stack_logo_right";
+}
+
+/** Ted Royer — stack · logo right with the layout preset plus any Ted-specific override. */
+export const DEFAULT_FRONT: FrontState = buildFrontForLayout(
+  defaultFrontChrome(1),
+  "stack_logo_right",
+  1,
+);
+
+/** All people share layout-level element defaults; only starting layout + pattern
+ *  + optional per-person overrides (see PERSON_FRONT_LAYOUT_OVERRIDES) differ. */
 export function defaultFrontForPerson(personId: number): FrontState {
-  const ted: FrontState = { ...DEFAULT_FRONT, pat: { ...DEFAULT_FRONT.pat } };
-  let out: FrontState;
-  if (personId === 1) {
-    out = JSON.parse(JSON.stringify(ted)) as FrontState;
-  } else if (personId === 2 || personId === 3) {
-    out = {
-      ...ted,
-      pat: personId === 3 ? { ...AVI_FRONT_FLOWER_PATTERN } : { ...ted.pat },
-      layout: "centered",
-      logoScale: clampLogoScale(2),
-      logoOffsetX: 0,
-      logoOffsetY: 12,
-      textOffsetX: 0,
-      nameTitleBlockOffsetY: 30,
-      nameTitleGap: clampNameTitleGap(26),
-      contactOffsetY: 10,
-      contactTelEmailGap: clampContactTelEmailGap(28),
-      fontScaleName: clampFontScale(1.05),
-      fontScaleTitle: clampFontScale(1.1),
-      fontScaleContactLabel: clampFontScale(1),
-      fontScaleContactValue: clampFontScale(1.1),
-    };
-  } else {
-    out = JSON.parse(JSON.stringify(ted)) as FrontState;
-  }
-  return normalizeFrontFontScalesForLayout(out);
+  return buildFrontForLayout(
+    defaultFrontChrome(personId),
+    defaultFrontLayoutForPerson(personId),
+    personId,
+  );
 }
 
 // ─── Back defaults ───────────────────────────────────────────────────────────
@@ -132,36 +147,66 @@ export const DEFAULT_QR_LINKS: QrLink[] = [
   { id: "lab", label: "devilsplayground", url: "https://devilsplayground.folkdevils.io/" },
 ];
 
-export const DEFAULT_BACK: BackState = {
-  color: "dark",
-  textFill: null,
-  subTextFill: "yellow",
-  logo: "lg_full",
-  logoScale: DEFAULT_LOGO_SCALE,
-  logoOffsetX: DEFAULT_LOGO_OFFSET_X,
-  logoOffsetY: DEFAULT_LOGO_OFFSET_Y,
-  layout: "one_qr",
-  qrColor: "yellow",
-  qrBody: "dots",
-  qrEyeFrame: "circle",
-  qrEyeBall: "circle",
-  qrFrame: null,
-  qrFrameRadius: 0.06,
-  qrLinks: DEFAULT_QR_LINKS.map((l) => ({ ...l })),
-  qrLinkIds: ["main"],
-  fontQrCaption: BACK_FONT_CAPTION_DEFAULT,
-  fontBackDisplay: BACK_FONT_DISPLAY_DEFAULT,
-  fontMinimalLink: BACK_FONT_MINIMAL_DEFAULT,
-  pat: { ...DEFAULT_PATTERN },
-};
+/** Chrome fields that persist across back-layout switches. */
+type BackChrome = Pick<
+  BackState,
+  | "color"
+  | "textFill"
+  | "subTextFill"
+  | "logo"
+  | "qrColor"
+  | "qrBody"
+  | "qrEyeFrame"
+  | "qrEyeBall"
+  | "qrFrame"
+  | "qrFrameRadius"
+  | "qrLinks"
+  | "qrLinkIds"
+  | "pat"
+>;
 
-/** Factory back face; Avi (id 3) alone swaps in AVI_BACK_FLOWER_PATTERN. */
+function defaultBackChrome(personId: number): BackChrome {
+  return {
+    color: "dark",
+    textFill: null,
+    subTextFill: "yellow",
+    logo: "lg_full",
+    qrColor: "yellow",
+    qrBody: "dots",
+    qrEyeFrame: "circle",
+    qrEyeBall: "circle",
+    qrFrame: null,
+    qrFrameRadius: 0.06,
+    qrLinks: DEFAULT_QR_LINKS.map((l) => ({ ...l })),
+    qrLinkIds: ["main"],
+    pat: personId === 3 ? { ...AVI_BACK_FLOWER_PATTERN } : { ...DEFAULT_PATTERN },
+  };
+}
+
+function buildBackForLayout(
+  chrome: BackChrome,
+  layout: BackLayout,
+  personId?: number,
+): BackState {
+  const d = resolveBackLayoutDefaults(layout, personId);
+  return {
+    ...chrome,
+    layout,
+    logoScale: clampLogoScale(d.logoScale),
+    logoOffsetX: clampLogoOffsetX(d.logoOffsetX),
+    logoOffsetY: clampLogoOffsetY(d.logoOffsetY),
+    fontQrCaption: clampFontQrCaption(d.fontQrCaption),
+    fontBackDisplay: clampFontBackDisplay(d.fontBackDisplay),
+    fontMinimalLink: clampFontMinimalLink(d.fontMinimalLink),
+  };
+}
+
+export const DEFAULT_BACK: BackState = buildBackForLayout(defaultBackChrome(1), "one_qr", 1);
+
+/** Factory back face; Avi (id 3) alone swaps in AVI_BACK_FLOWER_PATTERN.
+ *  Per-person layout tweaks can be added via PERSON_BACK_LAYOUT_OVERRIDES. */
 export function defaultBackForPerson(personId: number): BackState {
-  const b = JSON.parse(JSON.stringify(DEFAULT_BACK)) as BackState;
-  if (personId === 3) {
-    b.pat = { ...AVI_BACK_FLOWER_PATTERN };
-  }
-  return b;
+  return buildBackForLayout(defaultBackChrome(personId), "one_qr", personId);
 }
 
 // ─── People defaults ─────────────────────────────────────────────────────────

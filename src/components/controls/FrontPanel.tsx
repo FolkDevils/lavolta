@@ -1,12 +1,11 @@
 "use client";
 
 import {
+  applyFrontLayoutDefaults,
   COLORS,
   defaultFrontForPerson,
   effectiveFontScaleRangeFor,
   FRONT_LAYOUTS,
-  defaultNameTitleGap,
-  clampNameTitleGap,
   normalizeFrontFontScalesForLayout,
   frontFontNamePx,
   frontFontTitlePx,
@@ -37,7 +36,15 @@ type Props = {
 };
 
 export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
-  const factory = defaultFrontForPerson(personId);
+  // Layout-aware, person-aware factory: reflects what the element-level fields
+  // would look like if the user reset this layout for this person (merging any
+  // PERSON_FRONT_LAYOUT_OVERRIDES on top of the global layout preset).
+  // Chrome (bg, colors, logo id, pattern) stays from the person's seed.
+  const factory = applyFrontLayoutDefaults(
+    defaultFrontForPerson(personId),
+    front.layout,
+    personId,
+  );
 
   const fontRanges = {
     name: effectiveFontScaleRangeFor(front.layout, frontFontNamePx),
@@ -69,16 +76,9 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
           options={FRONT_LAYOUTS}
           value={front.layout}
           onChange={(v) =>
-            onPatch((f) => {
-              const prevDef = defaultNameTitleGap(f.layout);
-              const nextDef = defaultNameTitleGap(v);
-              const preserveGap = f.nameTitleGap !== prevDef;
-              return normalizeFrontFontScalesForLayout({
-                ...f,
-                layout: v,
-                nameTitleGap: preserveGap ? f.nameTitleGap : clampNameTitleGap(nextDef),
-              });
-            })
+            onPatch((f) =>
+              normalizeFrontFontScalesForLayout(applyFrontLayoutDefaults(f, v, personId)),
+            )
           }
         />
       </Section>

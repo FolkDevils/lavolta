@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Folk Devils Business Card Generator
 
-## Getting Started
+A web-based business card designer for Folk Devils. Design, preview, and export print-ready cards for each team member — front and back, fully customizable, straight to MOO-compatible PDF.
 
-First, run the development server:
+## Features
+
+- **Per-person cards** — each person gets independently configurable front and back faces
+- **Live preview** — SVG-rendered card with flip animation between front/back
+- **7 front layouts, 5 back layouts** — stack, centered, bold name, split columns, QR-led, type-led, minimal
+- **Full design control** — color palettes, custom hex colors, logo position/scale, font scale per text role, text positioning, flower pattern overlays, QR code style
+- **Editable number fields** — every slider has a type-in number field alongside it
+- **Export** — SVG, 300-DPI PNG, and MOO-compatible full-bleed PDF (front + back)
+- **Auto-save** — all settings persist to `localStorage` across sessions
+- **Responsive** — works on mobile (stacked layout) and desktop (3-column)
+
+## Dev
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm run build      # production build
+npx tsc --noEmit   # type-check
+npx eslint src --ext .ts,.tsx --max-warnings 0  # lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Print spec
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| | |
+|---|---|
+| Finished size | 3.5″ × 2.0″ |
+| Bleed | 0.125″ all sides |
+| Full-bleed doc | 3.75″ × 2.25″ |
+| PNG export | 1125 × 675 px @ 300 DPI |
+| SVG viewBox | 600 × 360 units (160 units/inch) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Codebase map
 
-## Learn More
+```
+src/
+├── app/               Next.js App Router entry points
+├── components/
+│   ├── Editor.tsx     Main shell — layout + wiring only
+│   ├── card/          SVG card face components (CardFront, CardBack, shared helpers)
+│   └── controls/      All editor UI (panels, sliders, pickers, sections)
+├── hooks/
+│   ├── useEditorState.ts  All app state + localStorage persistence
+│   └── useExport.ts       Export state, SVG refs, handleExport
+└── lib/
+    ├── types.ts       All TypeScript types
+    ├── print.ts       SVG/print dimension constants
+    ├── palette.ts     Color swatches, logos, flowers
+    ├── layouts.ts     Layout options, QR style options
+    ├── typography.ts  Font scale helpers
+    ├── defaults.ts    Factory defaults + migration
+    ├── storage.ts     localStorage key
+    ├── color.ts       Color resolution helpers
+    ├── export.ts      SVG/PNG/PDF export functions
+    ├── qr.ts          QR path builder
+    └── constants.ts   Re-export barrel (all lib/* in one import)
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For detailed agent/AI guidance on how to modify this codebase, see [AGENTS.md](./AGENTS.md).

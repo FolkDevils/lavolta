@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  applyFrontLayoutDefaults,
   CONTACT_TEL_EMAIL_GAP_RANGE,
   defaultFrontForPerson,
   NAME_TITLE_GAP_RANGE,
@@ -26,7 +27,9 @@ const STACKED_LAYOUTS = new Set<FrontState["layout"]>([
 ]);
 
 export function PositioningPanel({ front, personId, onChange }: Props) {
-  const fb = defaultFrontForPerson(personId);
+  // Layout-aware + person-aware baseline so "Reset all positions" restores the
+  // current layout's effective defaults (global preset + any PERSON override).
+  const fb = applyFrontLayoutDefaults(defaultFrontForPerson(personId), front.layout, personId);
   const usesNameTitleGap = STACKED_LAYOUTS.has(front.layout);
 
   const dirty =
