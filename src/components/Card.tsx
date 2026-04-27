@@ -225,10 +225,11 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
     /* Contact block:
      *   - label/value order flips with anchor so the label stays *outside*
      *     the value in the reading direction
-     *   - 56-unit gutter keeps "EMAIL" clear of its value
+     *   - 68-unit gutter keeps "EMAIL" clear of its value with a bit of
+     *     breathing room (up from 56)
      *   - row spacing between TEL and EMAIL is user-controlled (`contactTelEmailGap`). */
     const labelX = isEnd ? xRight : xLeft;
-    const valueX = isEnd ? xRight - 56 : xLeft + 56;
+    const valueX = isEnd ? xRight - 68 : xLeft + 68;
     const rowGap = clampContactTelEmailGap(fs.contactTelEmailGap);
 
     /* Y positions for each line. `distributed` keeps the classic stack where

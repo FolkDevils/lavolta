@@ -240,7 +240,7 @@ export function frontFontNamePx(layout: FrontLayout, scale: unknown): number {
 
 export function frontFontTitlePx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    13, // ≈ 5.85 pt floor — tight minimum for ALL CAPS tracked titles
+    14, // ≈ 6.30 pt floor — stays above the commercial 6 pt print minimum
     32,
     Math.round(FRONT_FONT_TITLE_BASE[layout] * clampFontScale(scale)),
   );
@@ -248,7 +248,7 @@ export function frontFontTitlePx(layout: FrontLayout, scale: unknown): number {
 
 export function frontFontContactLabelPx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    13, // ≈ 5.85 pt floor
+    14, // ≈ 6.30 pt floor — stays above the commercial 6 pt print minimum
     22,
     Math.round(FRONT_FONT_CONTACT_LABEL_BASE[layout] * clampFontScale(scale)),
   );
@@ -268,7 +268,7 @@ export const BACK_FONT_MINIMAL_DEFAULT = 18; // ~8.10 pt (up from 7.20 pt)
 
 export function clampFontQrCaption(n: unknown): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : BACK_FONT_CAPTION_DEFAULT;
-  return Math.round(Math.min(24, Math.max(13, x))); // 5.85–10.8 pt
+  return Math.round(Math.min(24, Math.max(14, x))); // 6.30–10.8 pt
 }
 
 export function clampFontBackDisplay(n: unknown): number {
@@ -474,7 +474,7 @@ export const DEFAULT_PATTERN: PatternConfig = {
   seed: 4242,
 };
 
-/** Ted Royer — stack · logo right, factory wordmark nudge, neutral type/position (id 1 + anyone not Andrew/Avi). */
+/** Ted Royer — stack · logo right, tuned wordmark position, neutral type/position (id 1 + anyone not Andrew/Avi). */
 export const DEFAULT_FRONT: FrontState = {
   color: "dark",
   textFill: null,
@@ -483,8 +483,8 @@ export const DEFAULT_FRONT: FrontState = {
   emailFill: null,
   logo: "lg_full",
   logoScale: clampLogoScale(DEFAULT_LOGO_SCALE),
-  logoOffsetX: DEFAULT_LOGO_OFFSET_X,
-  logoOffsetY: DEFAULT_LOGO_OFFSET_Y,
+  logoOffsetX: -32,
+  logoOffsetY: 3,
   textOffsetX: 0,
   nameTitleBlockOffsetY: 0,
   nameTitleGap: NAME_TITLE_GAP_DEFAULT_STACK,
@@ -493,7 +493,7 @@ export const DEFAULT_FRONT: FrontState = {
   fontScaleName: clampFontScale(1),
   fontScaleTitle: clampFontScale(1),
   fontScaleContactLabel: clampFontScale(1),
-  fontScaleContactValue: clampFontScale(1),
+  fontScaleContactValue: clampFontScale(1.1),
   layout: "stack_logo_right",
   pat: { ...DEFAULT_PATTERN },
 };
@@ -518,7 +518,7 @@ export function defaultFrontForPerson(personId: number): FrontState {
       fontScaleName: clampFontScale(1.05),
       fontScaleTitle: clampFontScale(1.1),
       fontScaleContactLabel: clampFontScale(1),
-      fontScaleContactValue: clampFontScale(1),
+      fontScaleContactValue: clampFontScale(1.1),
     };
   }
   return JSON.parse(JSON.stringify(ted)) as FrontState;
