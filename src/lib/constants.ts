@@ -493,7 +493,7 @@ export const DEFAULT_FRONT: FrontState = {
   fontScaleName: clampFontScale(1),
   fontScaleTitle: clampFontScale(1),
   fontScaleContactLabel: clampFontScale(1),
-  fontScaleContactValue: clampFontScale(1.1),
+  fontScaleContactValue: clampFontScale(1),
   layout: "stack_logo_right",
   pat: { ...DEFAULT_PATTERN },
 };
