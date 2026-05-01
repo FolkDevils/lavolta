@@ -251,11 +251,11 @@ export default function Editor() {
           </div>
 
           {/* Face + orientation toggles — order-1 on <lg so they sit above the tall preview */}
-          <div className="order-1 lg:order-2 flex flex-wrap items-center justify-center gap-3 shrink-0">
+          <div className="order-1 lg:order-2 flex flex-nowrap items-center justify-center gap-1.5 sm:gap-3 shrink-0 w-full max-w-full min-w-0 px-0.5">
             <div
               role="group"
               aria-label="Card face"
-              className="flex border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
+              className="flex shrink-0 border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
             >
               {(
                 [
@@ -267,7 +267,7 @@ export default function Editor() {
                   key={f}
                   type="button"
                   onClick={() => switchTab(f)}
-                  className={`px-7 py-2 text-[10px] uppercase tracking-[0.12em] min-h-[36px] transition
+                  className={`px-2.5 sm:px-5 lg:px-7 py-2 text-[9px] sm:text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.12em] min-h-[34px] sm:min-h-[36px] whitespace-nowrap transition
                     ${tab === f
                       ? "bg-[#6B1E2D] text-[#F6F4E8] font-bold"
                       : "bg-transparent text-[rgba(246,244,232,0.45)] hover:text-[rgba(246,244,232,0.85)]"}`}
@@ -280,25 +280,26 @@ export default function Editor() {
             <div
               role="group"
               aria-label="Card orientation"
-              className="flex border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
+              className="flex shrink-0 border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
             >
               {(
                 [
-                  ["landscape", "Landscape"],
-                  ["portrait", "Portrait"],
+                  ["landscape", "Wide", "Landscape"],
+                  ["portrait", "Tall", "Portrait"],
                 ] as const
-              ).map(([o, label]) => (
+              ).map(([o, short, long]) => (
                 <button
                   key={o}
                   type="button"
                   onClick={() => setOrientation(o)}
                   title={o === "landscape" ? "Landscape · 8.5″ × 5.5″" : "Portrait · 5.5″ × 8.5″"}
-                  className={`px-7 py-2 text-[10px] uppercase tracking-[0.12em] min-h-[36px] transition
+                  className={`px-2.5 sm:px-5 lg:px-7 py-2 text-[9px] sm:text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.12em] min-h-[34px] sm:min-h-[36px] whitespace-nowrap transition
                     ${orientation === o
                       ? "bg-[#6B1E2D] text-[#F6F4E8] font-bold"
                       : "bg-transparent text-[rgba(246,244,232,0.45)] hover:text-[rgba(246,244,232,0.85)]"}`}
                 >
-                  {label}
+                  <span className="sm:hidden">{short}</span>
+                  <span className="hidden sm:inline">{long}</span>
                 </button>
               ))}
             </div>
