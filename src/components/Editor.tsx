@@ -76,7 +76,7 @@ export default function Editor() {
   }
 
   return (
-    <div className="h-dvh flex flex-col bg-[#1f1c1a] text-[#F6F4E8] overflow-hidden">
+    <div className="h-dvh min-h-0 flex flex-col bg-[#1f1c1a] text-[#F6F4E8] overflow-x-hidden overflow-y-hidden lg:overflow-hidden">
 
       {/* ── Error banner ──────────────────────────────────── */}
       {exportError && (
@@ -135,7 +135,7 @@ export default function Editor() {
       </header>
 
       {/* ── Body ──────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto overflow-x-hidden lg:overflow-hidden relative">
 
         {/* Mobile backdrop for People drawer */}
         {peopleOpen && (
@@ -222,13 +222,14 @@ export default function Editor() {
             lg+: flex-1 so the card fills the space between the two rails */}
         <section className="shrink-0 lg:flex-1 flex flex-col items-center justify-center gap-3 p-3 sm:p-4 lg:p-6 bg-[#1f1c1a] min-w-0 lg:overflow-hidden">
           <div
-            className={`flip-card shadow-[0_20px_60px_rgba(0,0,0,0.65),0_4px_18px_rgba(0,0,0,0.45)] rounded-xl overflow-hidden ${
+            className={`order-2 lg:order-1 flip-card shadow-[0_20px_60px_rgba(0,0,0,0.65),0_4px_18px_rgba(0,0,0,0.45)] rounded-xl overflow-hidden ${
               flipPhase === "out" ? "flip-out" : "flip-in"
             }`}
             style={
               orientation === "portrait"
                 ? {
-                    height: "min(82vh, 760px)",
+                    /* Short viewports: leave room for header + toggles (mobile orders toggles above). */
+                    height: "min(min(56dvh, 520px), 760px)",
                     maxWidth: "92vw",
                     aspectRatio: `${cardDims.vbW} / ${cardDims.vbH}`,
                   }
@@ -249,8 +250,8 @@ export default function Editor() {
             </CardFontProvider>
           </div>
 
-          {/* Face + orientation toggles */}
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          {/* Face + orientation toggles — order-1 on <lg so they sit above the tall preview */}
+          <div className="order-1 lg:order-2 flex flex-wrap items-center justify-center gap-3 shrink-0">
             <div
               role="group"
               aria-label="Card face"
@@ -303,7 +304,7 @@ export default function Editor() {
             </div>
           </div>
 
-          <div className="text-[9px] uppercase tracking-[0.14em] text-[rgba(246,244,232,0.22)]">
+          <div className="order-3 text-[9px] uppercase tracking-[0.14em] text-[rgba(246,244,232,0.22)] shrink-0">
             {cardDims.finishedWIn}″ × {cardDims.finishedHIn}″&nbsp;·&nbsp;
             {EXPORT_SPEC.bleedIn}″ bleed&nbsp;·&nbsp;
             {cardDims.pxW}×{cardDims.pxH} @ {EXPORT_SPEC.dpi} DPI
@@ -313,7 +314,7 @@ export default function Editor() {
         {/* ── Design rail ───────────────────────────────── */}
         {/* mobile: flex-1 → expands to fill the scroll area below the card
             lg+: fixed 340px right aside, card section takes remaining space */}
-        <aside className="flex-1 lg:flex-none lg:w-[340px] bg-[#2c2826] border-t lg:border-t-0 lg:border-l border-[rgba(246,244,232,0.08)] flex-shrink-0 flex flex-col overflow-hidden">
+        <aside className="flex-1 min-h-0 lg:flex-none lg:w-[340px] bg-[#2c2826] border-t lg:border-t-0 lg:border-l border-[rgba(246,244,232,0.08)] flex-shrink-0 flex flex-col overflow-hidden">
 
           {/* Face tabs — sticky at top of rail */}
           <div className="flex border-b border-[rgba(246,244,232,0.09)] flex-shrink-0">
