@@ -54,9 +54,9 @@ export function PersonSettingsTransfer({ personName, onDownload, onImportJson }:
   return (
     <div>
       <SectionLabel>Person settings file</SectionLabel>
-      <p className="text-[9px] text-[rgba(255,208,0,0.4)] leading-snug mb-2 mt-1">
+      <p className="text-[9px] text-[rgba(246,244,232,0.4)] leading-snug mb-2 mt-1">
         Download this person&apos;s contact info, front card, and back card as JSON. Import
-        replaces the <span className="text-[rgba(255,208,0,0.55)]">selected</span> person only.
+        replaces the <span className="text-[rgba(246,244,232,0.55)]">selected</span> person only.
       </p>
       <div className="flex flex-col gap-1.5">
         <button
@@ -66,14 +66,14 @@ export function PersonSettingsTransfer({ personName, onDownload, onImportJson }:
             setMessage("");
             onDownload();
           }}
-          className="w-full py-2 px-3 rounded-md border border-[rgba(255,208,0,0.25)] text-[10px] font-bold uppercase tracking-[0.1em] text-[#ffd000] hover:bg-[rgba(255,208,0,0.08)] hover:border-[rgba(255,208,0,0.45)] transition"
+          className="w-full py-2 px-3 rounded-md border border-[rgba(246,244,232,0.25)] text-[10px] font-bold uppercase tracking-[0.1em] text-[#F6F4E8] hover:bg-[rgba(246,244,232,0.08)] hover:border-[rgba(246,244,232,0.45)] transition"
         >
           Download settings…
         </button>
         <button
           type="button"
           onClick={pickFile}
-          className="w-full py-2 px-3 rounded-md border border-[rgba(255,208,0,0.25)] text-[10px] font-bold uppercase tracking-[0.1em] text-[rgba(255,208,0,0.85)] hover:bg-[rgba(255,208,0,0.06)] hover:border-[rgba(255,208,0,0.35)] transition"
+          className="w-full py-2 px-3 rounded-md border border-[rgba(246,244,232,0.25)] text-[10px] font-bold uppercase tracking-[0.1em] text-[rgba(246,244,232,0.85)] hover:bg-[rgba(246,244,232,0.06)] hover:border-[rgba(246,244,232,0.35)] transition"
         >
           Import settings…
         </button>
@@ -89,7 +89,7 @@ export function PersonSettingsTransfer({ personName, onDownload, onImportJson }:
       {status !== "idle" && (
         <p
           className={`mt-2 text-[9px] leading-snug ${
-            status === "ok" ? "text-[rgba(255,208,0,0.75)]" : "text-[#ff6b6b]"
+            status === "ok" ? "text-[rgba(246,244,232,0.75)]" : "text-[#ff6b6b]"
           }`}
         >
           {message}

@@ -25,6 +25,8 @@ import { TextColorBlock } from "./TextColorBlock";
 import { LogoPicker } from "./LogoPicker";
 import { QrLinksManager } from "./QrLinksManager";
 import { PatternPanel } from "./PatternPanel";
+import { BackgroundImageSection } from "./BackgroundImageSection";
+import { LogoAdjustBlock } from "./LogoAdjustBlock";
 
 const BG_OPTIONS: PaletteOption[] = COLORS.map((c) => ({ id: c.id, name: c.name, swatch: c.sw }));
 const SOLID_OPTIONS: PaletteOption[] = FD_SOLID_PALETTE.map((c) => ({ id: c.id, name: c.name, swatch: c.hex }));
@@ -78,12 +80,12 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
       {/* ── Colors ────────────────────────────────────────── */}
       <Section id="back-colors" title="Colors" edited={colorDirty}>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)] mb-1.5">Background</div>
+          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1.5">Background</div>
           <ColorSelect
             value={back.color}
             onChange={(v) => v != null && onChange({ color: v })}
             options={BG_OPTIONS}
-            resolvedHex={resolveSolidHex(back.color, "#29001d")}
+            resolvedHex={resolveSolidHex(back.color, "#6B1E2D")}
           />
         </div>
         <TextColorBlock
@@ -98,8 +100,8 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
 
       {/* ── Typography ────────────────────────────────────── */}
       <Section id="back-type" title="Typography" edited={typeDirty}>
-        <p className="text-[9px] text-[rgba(255,208,0,0.38)] leading-snug">
-          SVG units. QR caption shows under codes. Display is the large &ldquo;FOLK DEVILS&rdquo; headline. Minimal link is beside small QRs.
+        <p className="text-[9px] text-[rgba(246,244,232,0.38)] leading-snug">
+          SVG units. QR caption shows under codes. Display is the large &ldquo;LA VOLTA&rdquo; headline. Minimal link is beside small QRs.
         </p>
         <FDRange
           label="QR caption"
@@ -136,7 +138,7 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
                 fontMinimalLink: factory.fontMinimalLink,
               }))
             }
-            className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+            className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.45)] hover:text-[#F6F4E8]"
           >
             Reset type sizes
           </button>
@@ -144,7 +146,7 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
       </Section>
 
       {/* ── Logo ──────────────────────────────────────────── */}
-      <Section id="back-logo" title="Logo" summary={back.logo === "none" ? "None" : back.logo === "lg_full" ? "Wordmark" : "Icon"}>
+      <Section id="back-logo" title="Logo" summary={back.logo === "none" ? "None" : "La Volta"}>
         <LogoPicker
           logo={back.logo}
           logoScale={back.logoScale}
@@ -160,12 +162,23 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
           baselineOffsetX={factory.logoOffsetX}
           baselineOffsetY={factory.logoOffsetY}
         />
+        {back.logo !== "none" ? (
+          <LogoAdjustBlock value={back.logoAdjust} onChange={(patch) => onChange({ logoAdjust: { ...back.logoAdjust, ...patch } })} />
+        ) : null}
+      </Section>
+
+      <Section id="back-bg-image" title="Background photo" summary={back.bgImage.enabled ? "On" : "Off"}>
+        <BackgroundImageSection
+          label="Back"
+          cfg={back.bgImage}
+          onChange={(patch) => onChange({ bgImage: { ...back.bgImage, ...patch } })}
+        />
       </Section>
 
       {/* ── QR Style ──────────────────────────────────────── */}
       <Section id="back-qr-style" title="QR Style" edited={qrStyleDirty}>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)] mb-1.5">Color</div>
+          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1.5">Color</div>
           <ColorSelect
             value={back.qrColor}
             onChange={(v) => onChange({ qrColor: v })}
@@ -178,19 +191,19 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
           />
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)] mb-1.5">Body shape</div>
+          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1.5">Body shape</div>
           <ChipRow options={QR_BODY_OPTIONS} value={back.qrBody} onChange={(v) => onChange({ qrBody: v })} />
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)] mb-1.5">Eye frame</div>
+          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1.5">Eye frame</div>
           <ChipRow options={QR_EYE_OPTIONS} value={back.qrEyeFrame} onChange={(v) => onChange({ qrEyeFrame: v })} />
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)] mb-1.5">Eye ball</div>
+          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1.5">Eye ball</div>
           <ChipRow options={QR_EYE_OPTIONS} value={back.qrEyeBall} onChange={(v) => onChange({ qrEyeBall: v })} />
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)] mb-1.5">Frame background</div>
+          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1.5">Frame background</div>
           <ColorSelect
             value={back.qrFrame}
             onChange={(v) => onChange({ qrFrame: v })}

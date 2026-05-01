@@ -1,11 +1,15 @@
 import type { FrontLayout, FrontState } from "./types";
-import { SAFE_INSET, VB_H } from "./print";
+import { CARD_GEOM_SCALE } from "./print";
 
 // ─── Contact gap ─────────────────────────────────────────────────────────────
 
 /** TEL vs EMAIL row spacing in stack layouts (viewBox units). */
-export const CONTACT_TEL_EMAIL_GAP_DEFAULT = 28;
-export const CONTACT_TEL_EMAIL_GAP_RANGE = { min: 14, max: 56, step: 1 } as const;
+export const CONTACT_TEL_EMAIL_GAP_DEFAULT = Math.round(28 * CARD_GEOM_SCALE);
+export const CONTACT_TEL_EMAIL_GAP_RANGE = {
+  min: Math.round(14 * CARD_GEOM_SCALE),
+  max: Math.round(120 * CARD_GEOM_SCALE),
+  step: 1,
+} as const;
 
 export function clampContactTelEmailGap(n: unknown): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : CONTACT_TEL_EMAIL_GAP_DEFAULT;
@@ -17,14 +21,10 @@ export function clampContactTelEmailGap(n: unknown): number {
 
 // ─── Name–title gap ──────────────────────────────────────────────────────────
 
-const _NAME_TITLE_PAD = SAFE_INSET + 20;
-const _NAME_TITLE_CONTENT_H = VB_H - _NAME_TITLE_PAD * 2;
-
-export const NAME_TITLE_GAP_DEFAULT_STACK = 18;
-export const NAME_TITLE_GAP_DEFAULT_CENTERED = 22;
-export const NAME_TITLE_GAP_DEFAULT_BOLD = Math.round(
-  _NAME_TITLE_PAD + _NAME_TITLE_CONTENT_H - 34 - (_NAME_TITLE_PAD + _NAME_TITLE_CONTENT_H * 0.58),
-);
+export const NAME_TITLE_GAP_DEFAULT_STACK = Math.round(18 * CARD_GEOM_SCALE);
+export const NAME_TITLE_GAP_DEFAULT_CENTERED = Math.round(22 * CARD_GEOM_SCALE);
+/** Bold layout: title sits low; gap tuned for tall portrait card. */
+export const NAME_TITLE_GAP_DEFAULT_BOLD = Math.round(28 * CARD_GEOM_SCALE);
 
 export function defaultNameTitleGap(layout: FrontLayout): number {
   switch (layout) {
@@ -32,15 +32,16 @@ export function defaultNameTitleGap(layout: FrontLayout): number {
       return NAME_TITLE_GAP_DEFAULT_CENTERED;
     case "bold":
       return NAME_TITLE_GAP_DEFAULT_BOLD;
-    case "text_left":
-    case "logo_left":
-      return NAME_TITLE_GAP_DEFAULT_STACK;
     default:
       return NAME_TITLE_GAP_DEFAULT_STACK;
   }
 }
 
-export const NAME_TITLE_GAP_RANGE = { min: 8, max: 100, step: 1 } as const;
+export const NAME_TITLE_GAP_RANGE = {
+  min: 8,
+  max: Math.round(100 * CARD_GEOM_SCALE),
+  step: 1,
+} as const;
 
 export function clampNameTitleGap(n: unknown): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : NAME_TITLE_GAP_DEFAULT_STACK;
@@ -60,79 +61,73 @@ function fontClampPx(lo: number, hi: number, n: number): number {
   return Math.min(hi, Math.max(lo, n));
 }
 
+const S = CARD_GEOM_SCALE;
+
 export const FRONT_FONT_NAME_BASE: Record<FrontLayout, number> = {
-  stack: 34,
-  stack_logo_left: 34,
-  stack_logo_right: 34,
-  centered: 28,
-  bold: 56,
-  text_left: 28,
-  logo_left: 28,
+  stack: Math.round(34 * S),
+  stack_logo_left: Math.round(34 * S),
+  stack_logo_right: Math.round(34 * S),
+  centered: Math.round(28 * S),
+  bold: Math.round(56 * S),
 };
 
-/* Base font sizes are in SVG viewBox units (160/inch).
- * Convert to print points with × 72/160 = 0.45. We target ≥ 6.5 pt floor
- * on every live-text field so names, titles, and contact values stay
- * legible at 300 DPI on a 3.5" × 2" card. */
-
 export const FRONT_FONT_TITLE_BASE: Record<FrontLayout, number> = {
-  stack: 15,       // ~6.75 pt
-  stack_logo_left: 15,
-  stack_logo_right: 15,
-  centered: 14,    // ~6.30 pt
-  bold: 14,
-  text_left: 14,
-  logo_left: 14,
+  stack: Math.round(15 * S),
+  stack_logo_left: Math.round(15 * S),
+  stack_logo_right: Math.round(15 * S),
+  centered: Math.round(14 * S),
+  bold: Math.round(14 * S),
 };
 
 export const FRONT_FONT_CONTACT_LABEL_BASE: Record<FrontLayout, number> = {
-  stack: 14,       // ~6.30 pt
-  stack_logo_left: 14,
-  stack_logo_right: 14,
-  centered: 14,
-  bold: 14,
-  text_left: 14,
-  logo_left: 14,
+  stack: Math.round(14 * S),
+  stack_logo_left: Math.round(14 * S),
+  stack_logo_right: Math.round(14 * S),
+  centered: Math.round(14 * S),
+  bold: Math.round(14 * S),
 };
 
 export const FRONT_FONT_CONTACT_VALUE_BASE: Record<FrontLayout, number> = {
-  stack: 16,       // ~7.20 pt
-  stack_logo_left: 16,
-  stack_logo_right: 16,
-  centered: 15,    // ~6.75 pt
-  bold: 15,
-  text_left: 15,
-  logo_left: 15,
+  stack: Math.round(16 * S),
+  stack_logo_left: Math.round(16 * S),
+  stack_logo_right: Math.round(16 * S),
+  centered: Math.round(15 * S),
+  bold: Math.round(15 * S),
 };
+
+const NAME_PX_MAX = Math.round(200 * S);
+const TITLE_PX_MAX = Math.round(48 * S);
+const CONTACT_LABEL_PX_MAX = Math.round(36 * S);
+const CONTACT_VALUE_PX_MAX = Math.round(44 * S);
 
 export function frontFontNamePx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    15, // ≈ 6.75 pt floor — names shouldn't ever print smaller than this
-    120,
+    Math.round(15 * S),
+    NAME_PX_MAX,
     Math.round(FRONT_FONT_NAME_BASE[layout] * clampFontScale(scale)),
   );
 }
 
 export function frontFontTitlePx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    14, // ≈ 6.30 pt floor — stays above the commercial 6 pt print minimum
-    32,
+    Math.round(14 * S),
+    TITLE_PX_MAX,
     Math.round(FRONT_FONT_TITLE_BASE[layout] * clampFontScale(scale)),
   );
 }
 
 export function frontFontContactLabelPx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    14, // ≈ 6.30 pt floor — stays above the commercial 6 pt print minimum
-    22,
+    Math.round(14 * S),
+    CONTACT_LABEL_PX_MAX,
     Math.round(FRONT_FONT_CONTACT_LABEL_BASE[layout] * clampFontScale(scale)),
   );
 }
 
 export function frontFontContactValuePx(layout: FrontLayout, scale: unknown): number {
   return fontClampPx(
-    14, // ≈ 6.30 pt floor — phone/email must stay dial-able
-    30,
+    Math.round(14 * S),
+    CONTACT_VALUE_PX_MAX,
     Math.round(FRONT_FONT_CONTACT_VALUE_BASE[layout] * clampFontScale(scale)),
   );
 }
@@ -187,13 +182,25 @@ export function normalizeFrontFontScalesForLayout(f: FrontState): FrontState {
 
 // ─── Back font sizes ─────────────────────────────────────────────────────────
 
-export const BACK_FONT_CAPTION_DEFAULT = 15;   // ~6.75 pt
-export const BACK_FONT_DISPLAY_DEFAULT = 54;   // ~24.3 pt
-export const BACK_FONT_MINIMAL_DEFAULT = 18;   // ~8.10 pt
+export const BACK_FONT_CAPTION_DEFAULT = Math.round(15 * S);
+export const BACK_FONT_DISPLAY_DEFAULT = Math.round(54 * S);
+export const BACK_FONT_MINIMAL_DEFAULT = Math.round(18 * S);
 
-export const BACK_FONT_QR_CAPTION_SLIDER_RANGE = { min: 14, max: 24, step: 1 } as const;
-export const BACK_FONT_DISPLAY_SLIDER_RANGE = { min: 20, max: 96, step: 1 } as const;
-export const BACK_FONT_MINIMAL_LINK_SLIDER_RANGE = { min: 14, max: 34, step: 1 } as const;
+export const BACK_FONT_QR_CAPTION_SLIDER_RANGE = {
+  min: Math.round(14 * S),
+  max: Math.round(40 * S),
+  step: 1,
+} as const;
+export const BACK_FONT_DISPLAY_SLIDER_RANGE = {
+  min: Math.round(28 * S),
+  max: Math.round(140 * S),
+  step: 1,
+} as const;
+export const BACK_FONT_MINIMAL_LINK_SLIDER_RANGE = {
+  min: Math.round(14 * S),
+  max: Math.round(52 * S),
+  step: 1,
+} as const;
 
 export function clampFontQrCaption(n: unknown): number {
   const { min, max } = BACK_FONT_QR_CAPTION_SLIDER_RANGE;

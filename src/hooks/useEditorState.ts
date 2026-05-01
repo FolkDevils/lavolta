@@ -246,7 +246,7 @@ export function useEditorState() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${personSettingsDownloadBasename(p.name)}-fd-card-settings.json`;
+    a.download = `${personSettingsDownloadBasename(p.name)}-lavolta-card-settings.json`;
     a.rel = "noopener";
     document.body.appendChild(a);
     a.click();

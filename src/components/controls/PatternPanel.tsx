@@ -22,8 +22,8 @@ export function PatternPanel({ cfg, onChange }: Props) {
           onClick={() => up("on", !cfg.on)}
           className={`text-[8px] font-bold uppercase tracking-[0.1em] rounded px-2 py-0.5 transition border
             ${cfg.on
-              ? "bg-[#440031] text-[#ffd000] border-[rgba(255,208,0,0.5)]"
-              : "bg-transparent text-[rgba(255,208,0,0.3)] border-[rgba(255,208,0,0.15)]"}`}
+              ? "bg-[#6B1E2D] text-[#F6F4E8] border-[rgba(246,244,232,0.5)]"
+              : "bg-transparent text-[rgba(246,244,232,0.3)] border-[rgba(246,244,232,0.15)]"}`}
         >
           {cfg.on ? "On" : "Off"}
         </button>
@@ -32,7 +32,7 @@ export function PatternPanel({ cfg, onChange }: Props) {
       {cfg.on && (
         <>
           <div>
-            <div className="text-[8px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.32)] mb-1.5">
+            <div className="text-[8px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.32)] mb-1.5">
               Flower Types
             </div>
             <div className="flex gap-1.5">
@@ -45,8 +45,8 @@ export function PatternPanel({ cfg, onChange }: Props) {
                     onClick={() => up(key, !cfg[key])}
                     className={`flex-1 h-10 rounded flex items-center justify-center transition border
                       ${active
-                        ? "bg-[rgba(255,208,0,0.1)] border-[rgba(255,208,0,0.45)]"
-                        : "bg-transparent border-[rgba(255,208,0,0.1)]"}`}
+                        ? "bg-[rgba(246,244,232,0.1)] border-[rgba(246,244,232,0.45)]"
+                        : "bg-transparent border-[rgba(246,244,232,0.1)]"}`}
                   >
                     <Image
                       src={FLOWER_SRCS[n - 1]}
@@ -73,8 +73,8 @@ export function PatternPanel({ cfg, onChange }: Props) {
 
           <button
             onClick={() => up("seed", Math.floor(Math.random() * 999999))}
-            className="w-full py-2 bg-[rgba(255,208,0,0.06)] border border-dashed border-[rgba(255,208,0,0.2)] rounded
-              text-[10px] font-semibold uppercase tracking-[0.08em] text-[rgba(255,208,0,0.6)] hover:bg-[rgba(255,208,0,0.12)] transition"
+            className="w-full py-2 bg-[rgba(246,244,232,0.06)] border border-dashed border-[rgba(246,244,232,0.2)] rounded
+              text-[10px] font-semibold uppercase tracking-[0.08em] text-[rgba(246,244,232,0.6)] hover:bg-[rgba(246,244,232,0.12)] transition"
           >
             ↻ Randomize Layout
           </button>

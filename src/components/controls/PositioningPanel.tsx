@@ -26,17 +26,26 @@ const STACKED_LAYOUTS = new Set<FrontState["layout"]>([
   "bold",
 ]);
 
+/** Layouts that render TEL above EMAIL on separate rows (the gap slider is
+ *  only meaningful here — centered + bold render phone/email inline). */
+const TWO_ROW_CONTACT_LAYOUTS = new Set<FrontState["layout"]>([
+  "stack",
+  "stack_logo_left",
+  "stack_logo_right",
+]);
+
 export function PositioningPanel({ front, personId, onChange }: Props) {
   // Layout-aware + person-aware baseline so "Reset all positions" restores the
   // current layout's effective defaults (global preset + any PERSON override).
   const fb = applyFrontLayoutDefaults(defaultFrontForPerson(personId), front.layout, personId);
   const usesNameTitleGap = STACKED_LAYOUTS.has(front.layout);
+  const usesTelEmailGap = TWO_ROW_CONTACT_LAYOUTS.has(front.layout);
 
   const dirty =
     front.textOffsetX !== fb.textOffsetX ||
     front.nameTitleBlockOffsetY !== fb.nameTitleBlockOffsetY ||
     front.contactOffsetY !== fb.contactOffsetY ||
-    front.contactTelEmailGap !== fb.contactTelEmailGap ||
+    (usesTelEmailGap && front.contactTelEmailGap !== fb.contactTelEmailGap) ||
     (usesNameTitleGap && front.nameTitleGap !== fb.nameTitleGap);
 
   const reset = () =>
@@ -51,7 +60,7 @@ export function PositioningPanel({ front, personId, onChange }: Props) {
   return (
     <div>
       <SectionLabel>
-        Text position{dirty ? <span className="text-[#ffd000]"> · edited</span> : null}
+        Text position{dirty ? <span className="text-[#F6F4E8]"> · edited</span> : null}
       </SectionLabel>
 
       <div className="mt-2 flex flex-col gap-3">
@@ -65,7 +74,7 @@ export function PositioningPanel({ front, personId, onChange }: Props) {
           formatLabel={formatSigned}
         />
 
-        <div className="h-px bg-[rgba(255,208,0,0.08)]" />
+        <div className="h-px bg-[rgba(246,244,232,0.08)]" />
 
         <FDRange
           label="Name + title · Y"
@@ -86,12 +95,12 @@ export function PositioningPanel({ front, personId, onChange }: Props) {
           disabled={!usesNameTitleGap}
         />
         {!usesNameTitleGap && (
-          <p className="text-[8px] text-[rgba(255,208,0,0.35)] leading-snug -mt-1">
+          <p className="text-[8px] text-[rgba(246,244,232,0.35)] leading-snug -mt-1">
             Gap applies to Stack, Centered, and Bold layouts only.
           </p>
         )}
 
-        <div className="h-px bg-[rgba(255,208,0,0.08)]" />
+        <div className="h-px bg-[rgba(246,244,232,0.08)]" />
 
         <FDRange
           label="Phone + Email · Y"
@@ -102,20 +111,22 @@ export function PositioningPanel({ front, personId, onChange }: Props) {
           onChange={(v) => onChange({ contactOffsetY: v })}
           formatLabel={formatSigned}
         />
-        <FDRange
-          label="TEL / Email row gap"
-          min={CONTACT_TEL_EMAIL_GAP_RANGE.min}
-          max={CONTACT_TEL_EMAIL_GAP_RANGE.max}
-          step={CONTACT_TEL_EMAIL_GAP_RANGE.step}
-          value={front.contactTelEmailGap}
-          onChange={(v) => onChange({ contactTelEmailGap: v })}
-        />
+        {usesTelEmailGap && (
+          <FDRange
+            label="TEL / Email row gap"
+            min={CONTACT_TEL_EMAIL_GAP_RANGE.min}
+            max={CONTACT_TEL_EMAIL_GAP_RANGE.max}
+            step={CONTACT_TEL_EMAIL_GAP_RANGE.step}
+            value={front.contactTelEmailGap}
+            onChange={(v) => onChange({ contactTelEmailGap: v })}
+          />
+        )}
 
         {dirty && (
           <button
             type="button"
             onClick={reset}
-            className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+            className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.45)] hover:text-[#F6F4E8]"
           >
             Reset all positions
           </button>

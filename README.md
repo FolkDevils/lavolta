@@ -1,6 +1,6 @@
-# Folk Devils Business Card Generator
+# La Volta Business Card Generator
 
-A web-based business card designer for Folk Devils. Design, preview, and export print-ready cards for each team member — front and back, fully customizable, straight to MOO-compatible PDF.
+A web-based business card designer for La Volta. Design, preview, and export print-ready cards — front and back, fully customizable, straight to MOO-compatible PDF.
 
 ## Features
 
@@ -27,11 +27,11 @@ npx eslint src --ext .ts,.tsx --max-warnings 0  # lint
 
 | | |
 |---|---|
-| Finished size | 3.5″ × 2.0″ |
+| Finished size | 8.5″ × 5.5″ (landscape) |
 | Bleed | 0.125″ all sides |
-| Full-bleed doc | 3.75″ × 2.25″ |
-| PNG export | 1125 × 675 px @ 300 DPI |
-| SVG viewBox | 600 × 360 units (160 units/inch) |
+| Full-bleed doc | 8.75″ × 5.75″ |
+| PNG export | 2625 × 1725 px @ 300 DPI |
+| SVG viewBox | 1400 × 920 units (160 units/inch) |
 
 ## Codebase map
 

@@ -21,6 +21,8 @@ import { TextColorBlock } from "./TextColorBlock";
 import { LogoPicker } from "./LogoPicker";
 import { PositioningPanel } from "./PositioningPanel";
 import { PatternPanel } from "./PatternPanel";
+import { BackgroundImageSection } from "./BackgroundImageSection";
+import { LogoAdjustBlock } from "./LogoAdjustBlock";
 
 const BG_OPTIONS: PaletteOption[] = COLORS.map((c) => ({
   id: c.id,
@@ -86,12 +88,12 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
       {/* ── Colors ────────────────────────────────────────── */}
       <Section id="front-colors" title="Colors" edited={colorDirty}>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)] mb-1.5">Background</div>
+          <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1.5">Background</div>
           <ColorSelect
             value={front.color}
             onChange={(v) => v != null && onChange({ color: v })}
             options={BG_OPTIONS}
-            resolvedHex={resolveSolidHex(front.color, "#29001d")}
+            resolvedHex={resolveSolidHex(front.color, "#6B1E2D")}
           />
         </div>
         <TextColorBlock
@@ -111,7 +113,7 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
 
       {/* ── Typography ────────────────────────────────────── */}
       <Section id="front-type" title="Typography" edited={typeDirty}>
-        <p className="text-[9px] text-[rgba(255,208,0,0.38)] leading-snug">
+        <p className="text-[9px] text-[rgba(246,244,232,0.38)] leading-snug">
           Scale multipliers against the layout&apos;s base size.
         </p>
         <FDRange
@@ -162,15 +164,23 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
                 fontScaleContactValue: factory.fontScaleContactValue,
               }))
             }
-            className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+            className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.45)] hover:text-[#F6F4E8]"
           >
             Reset type scales
           </button>
         )}
+
+        <div className="h-px bg-[rgba(246,244,232,0.08)] my-2" />
+
+        <PositioningPanel
+          front={front}
+          personId={personId}
+          onChange={onChange}
+        />
       </Section>
 
       {/* ── Logo ──────────────────────────────────────────── */}
-      <Section id="front-logo" title="Logo" summary={front.logo === "none" ? "None" : front.logo === "lg_full" ? "Wordmark" : "Icon"}>
+      <Section id="front-logo" title="Logo" summary={front.logo === "none" ? "None" : "La Volta"}>
         <LogoPicker
           logo={front.logo}
           logoScale={front.logoScale}
@@ -186,14 +196,17 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
           baselineOffsetX={factory.logoOffsetX}
           baselineOffsetY={factory.logoOffsetY}
         />
+        {front.logo !== "none" ? (
+          <LogoAdjustBlock value={front.logoAdjust} onChange={(patch) => onChange({ logoAdjust: { ...front.logoAdjust, ...patch } })} />
+        ) : null}
       </Section>
 
-      {/* ── Position ──────────────────────────────────────── */}
-      <Section id="front-position" title="Text Position">
-        <PositioningPanel
-          front={front}
-          personId={personId}
-          onChange={onChange}
+      {/* ── Background image ─────────────────────────────── */}
+      <Section id="front-bg-image" title="Background photo" summary={front.bgImage.enabled ? "On" : "Off"}>
+        <BackgroundImageSection
+          label="Front"
+          cfg={front.bgImage}
+          onChange={(patch) => onChange({ bgImage: { ...front.bgImage, ...patch } })}
         />
       </Section>
 

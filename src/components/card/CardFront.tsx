@@ -13,6 +13,7 @@ import {
   frontFontTitlePx,
 } from "@/lib/constants";
 import { resolveCardPalette, resolveSolidHex } from "@/lib/color";
+import { buildLogoImageFilter } from "@/lib/logoFilter";
 import type { FrontState, Person } from "@/lib/types";
 import { PatternLayer } from "../PatternLayer";
 import { CardShell, clampBox, CONTENT_H, CONTENT_W, CONTENT_X, CONTENT_Y, Txt } from "./shared";
@@ -34,6 +35,16 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
   const emailFill = fs.emailFill == null ? textFill : resolveSolidHex(fs.emailFill, textFill);
   const lg = LOGOS.find((x) => x.id === fs.logo) ?? LOGOS[0];
 
+  /* Scale horizontal / vertical layout from legacy 480×240 content box. */
+  const sx = CONTENT_W / 480;
+  const sy = CONTENT_H / 240;
+  /* Logo column for stack_logo_* — wide column so the crest reads large
+   * (centered layout uses LOGO_H_HERO instead, not these). */
+  const LOGO_COLUMN_W = Math.round(CONTENT_W * 0.38);
+  const LOGO_CENTER_H = Math.round(LOGO_COLUMN_W * 0.88);
+  const GAP = Math.round(36 * sx);
+  const labelValueGap = Math.round(78 * sx);
+
   const Logo = ({
     x,
     y,
@@ -47,9 +58,10 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
   }) => {
     if (!lg.src) return null;
     const scale = fs.logoScale ?? 1;
-    const ratio = lg.kind === "icon" ? 1 : 500 / 206;
+    const ratio = lg.kind === "icon" ? 1 : lg.aspect ?? 500 / 206;
     const hi = (lg.kind === "icon" ? h * 2 : h) * scale;
     const w = hi * ratio;
+    const logoFilter = buildLogoImageFilter(fs.logoAdjust);
     const baseOx = align === "start" ? x : align === "middle" ? x - w / 2 : x - w;
     const baseOy = y + h / 2 - hi / 2;
     const ox = clampBox(baseOx + (fs.logoOffsetX ?? 0), w, 0, VB_W);
@@ -62,6 +74,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
         width={w}
         height={hi}
         preserveAspectRatio="xMidYMid meet"
+        style={logoFilter ? { filter: logoFilter } : undefined}
       />
     );
   };
@@ -93,12 +106,22 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
     const textAnchor: "start" | "end" = isEnd ? "end" : "start";
     const nameX = isEnd ? xRight : xLeft;
     const labelX = isEnd ? xRight : xLeft;
-    const valueX = isEnd ? xRight - 68 : xLeft + 68;
+    const valueX = isEnd ? xRight - labelValueGap : xLeft + labelValueGap;
     const rowGap = clampContactTelEmailGap(fs.contactTelEmailGap);
-    const CY = VB_H / 2;
-    const nameY = verticalMode === "centered" ? CY - 32 : CONTENT_Y + CONTENT_H * 0.46;
+    const CY = CONTENT_Y + CONTENT_H / 2;
+    /* Centered = name+title sit just above middle, contact below middle (logo
+     * fills the rest of the column). Distributed = name in upper third, title
+     * just below, contact pinned near bottom. Both proportions tuned for an
+     * 8.5×5.5 landscape card. */
+    const nameY =
+      verticalMode === "centered"
+        ? CY - Math.round(CONTENT_H * 0.06)
+        : CONTENT_Y + Math.round(CONTENT_H * 0.55);
     const titleY = nameY + nameTitleGap;
-    const contactTopY = verticalMode === "centered" ? CY + 36 : CONTENT_Y + CONTENT_H - 44;
+    const contactTopY =
+      verticalMode === "centered"
+        ? CY + Math.round(CONTENT_H * 0.18)
+        : CONTENT_Y + Math.round(CONTENT_H * 0.85);
     const contactBottomY = contactTopY + rowGap;
 
     return (
@@ -132,6 +155,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
         </g>
         <g transform={contactTx}>
           <Txt
+            variant="sans"
             x={labelX}
             y={contactTopY}
             fontSize={fzCL}
@@ -142,10 +166,18 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           >
             TEL
           </Txt>
-          <Txt x={valueX} y={contactTopY} fontSize={fzCV} fill={phoneFill} textAnchor={textAnchor}>
+          <Txt
+            variant="sans"
+            x={valueX}
+            y={contactTopY}
+            fontSize={fzCV}
+            fill={phoneFill}
+            textAnchor={textAnchor}
+          >
             {person.phone}
           </Txt>
           <Txt
+            variant="sans"
             x={labelX}
             y={contactBottomY}
             fontSize={fzCL}
@@ -156,7 +188,14 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
           >
             EMAIL
           </Txt>
-          <Txt x={valueX} y={contactBottomY} fontSize={fzCV} fill={emailFill} textAnchor={textAnchor}>
+          <Txt
+            variant="sans"
+            x={valueX}
+            y={contactBottomY}
+            fontSize={fzCV}
+            fill={emailFill}
+            textAnchor={textAnchor}
+          >
             {person.email}
           </Txt>
         </g>
@@ -164,14 +203,17 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
     );
   };
 
-  const LOGO_CENTER_H = 80;
-  const LOGO_COLUMN_W = 200;
-  const GAP = 24;
+  /* Logo size baselines off CONTENT_H. `LOGO_H_HERO` is centered-layout only;
+   * other layouts use larger corner / stack / column sizes so ×scale can read. */
+  const LOGO_H_TOP = Math.round(CONTENT_H * 0.28);
+  const LOGO_H_HERO = Math.round(CONTENT_H * 0.4);
+  const LOGO_H_CORNER = Math.round(CONTENT_H * 0.28);
+  const contactBottomY = CONTENT_Y + CONTENT_H - Math.round(28 * sy);
 
   const layouts: Record<typeof fs.layout, React.ReactNode> = {
     stack: (
       <>
-        <Logo x={CONTENT_X} y={CONTENT_Y} h={56} />
+        <Logo x={CONTENT_X} y={CONTENT_Y} h={LOGO_H_TOP} />
         <StackColumn xLeft={CONTENT_X} xRight={CONTENT_X + CONTENT_W} />
       </>
     ),
@@ -181,7 +223,12 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
       const textLeft = CONTENT_X + LOGO_COLUMN_W + GAP;
       return (
         <>
-          <Logo x={logoCX} y={VB_H / 2 - LOGO_CENTER_H / 2} h={LOGO_CENTER_H} align="middle" />
+          <Logo
+            x={logoCX}
+            y={CONTENT_Y + CONTENT_H / 2 - LOGO_CENTER_H / 2}
+            h={LOGO_CENTER_H}
+            align="middle"
+          />
           <StackColumn
             anchor="end"
             xLeft={textLeft}
@@ -197,130 +244,127 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
       const textRight = CONTENT_X + CONTENT_W - LOGO_COLUMN_W - GAP;
       return (
         <>
-          <Logo x={logoCX} y={VB_H / 2 - LOGO_CENTER_H / 2} h={LOGO_CENTER_H} align="middle" />
+          <Logo
+            x={logoCX}
+            y={CONTENT_Y + CONTENT_H / 2 - LOGO_CENTER_H / 2}
+            h={LOGO_CENTER_H}
+            align="middle"
+          />
           <StackColumn xLeft={CONTENT_X} xRight={textRight} verticalMode="centered" />
         </>
       );
     })(),
 
-    centered: (
-      <>
-        <Logo x={VB_W / 2} y={CONTENT_Y + 10} h={54} align="middle" />
-        <g transform={nameTx}>
-          <Txt x={VB_W / 2} y={VB_H / 2 + 6} fontSize={fzName} fontWeight={700} fill={textFill} textAnchor="middle">
-            {person.name}
-          </Txt>
-        </g>
-        <g transform={titleTx}>
-          <Txt
-            x={VB_W / 2}
-            y={VB_H / 2 + 6 + nameTitleGap}
-            fontSize={fzTitle}
-            fontWeight={600}
-            fill={subFill}
-            letterSpacing="0.16em"
-            textAnchor="middle"
-          >
-            {person.title.toUpperCase()}
-          </Txt>
-        </g>
-        <g transform={contactTx}>
-          <Txt x={VB_W / 2 - 12} y={CONTENT_Y + CONTENT_H - 20} fontSize={fzCV} fill={phoneFill} textAnchor="end">
-            {person.phone}
-          </Txt>
-          <Txt x={VB_W / 2 + 12} y={CONTENT_Y + CONTENT_H - 20} fontSize={fzCV} fill={emailFill}>
-            {person.email}
-          </Txt>
-        </g>
-      </>
-    ),
+    centered: (() => {
+      const logoY = CONTENT_Y + Math.round(CONTENT_H * 0.02);
+      const nameY = CONTENT_Y + Math.round(CONTENT_H * 0.66);
+      const titleY = nameY + nameTitleGap;
+      const contactY = CONTENT_Y + CONTENT_H - Math.round(36 * sy);
+      /* Single <text> with two <tspan>s + a spacer tspan keeps phone+email
+       * centered as one group regardless of either string's width. */
+      const contactGap = Math.round(fzCV * 1.6);
+      return (
+        <>
+          <Logo x={VB_W / 2} y={logoY} h={LOGO_H_HERO} align="middle" />
+          <g transform={nameTx}>
+            <Txt
+              x={VB_W / 2}
+              y={nameY}
+              fontSize={fzName}
+              fontWeight={700}
+              fill={textFill}
+              textAnchor="middle"
+            >
+              {person.name}
+            </Txt>
+          </g>
+          <g transform={titleTx}>
+            <Txt
+              x={VB_W / 2}
+              y={titleY}
+              fontSize={fzTitle}
+              fontWeight={600}
+              fill={subFill}
+              letterSpacing="0.18em"
+              textAnchor="middle"
+              dominantBaseline="hanging"
+            >
+              {person.title.toUpperCase()}
+            </Txt>
+          </g>
+          <g transform={contactTx}>
+            <Txt
+              variant="sans"
+              x={VB_W / 2}
+              y={contactY}
+              fontSize={fzCV}
+              textAnchor="middle"
+            >
+              <tspan fill={phoneFill}>{person.phone}</tspan>
+              <tspan dx={contactGap} fill={emailFill}>
+                {person.email}
+              </tspan>
+            </Txt>
+          </g>
+        </>
+      );
+    })(),
 
-    bold: (
-      <>
-        <Logo x={CONTENT_X} y={CONTENT_Y} h={46} />
-        <g transform={nameTx}>
-          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H * 0.58} fontSize={fzName} fontWeight={900} fill={textFill} letterSpacing="-0.02em">
-            {person.name}
-          </Txt>
-        </g>
-        <g transform={titleTx}>
-          <Txt
-            x={CONTENT_X}
-            y={CONTENT_Y + CONTENT_H * 0.58 + nameTitleGap}
-            fontSize={fzTitle}
-            fontWeight={700}
-            fill={subFill}
-            letterSpacing="0.14em"
-          >
-            {person.title.toUpperCase()}
-          </Txt>
-        </g>
-        <g transform={contactTx}>
-          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 12} fontSize={fzCV} fill={phoneFill}>
-            {person.phone}
-          </Txt>
-          <Txt x={CONTENT_X + CONTENT_W * 0.5} y={CONTENT_Y + CONTENT_H - 12} fontSize={fzCV} fill={emailFill}>
-            {person.email}
-          </Txt>
-        </g>
-      </>
-    ),
+    bold: (() => {
+      const nameY = CONTENT_Y + Math.round(CONTENT_H * 0.55);
+      return (
+        <>
+          <Logo x={CONTENT_X} y={CONTENT_Y} h={LOGO_H_CORNER} />
+          <g transform={nameTx}>
+            <Txt
+              x={CONTENT_X}
+              y={nameY}
+              fontSize={fzName}
+              fontWeight={900}
+              fill={textFill}
+              letterSpacing="-0.02em"
+            >
+              {person.name}
+            </Txt>
+          </g>
+          <g transform={titleTx}>
+            <Txt
+              x={CONTENT_X}
+              y={nameY + nameTitleGap}
+              fontSize={fzTitle}
+              fontWeight={700}
+              fill={subFill}
+              letterSpacing="0.14em"
+              dominantBaseline="hanging"
+            >
+              {person.title.toUpperCase()}
+            </Txt>
+          </g>
+          <g transform={contactTx}>
+            <Txt
+              variant="sans"
+              x={CONTENT_X}
+              y={contactBottomY}
+              fontSize={fzCV}
+              fill={phoneFill}
+            >
+              {person.phone}
+            </Txt>
+            <Txt
+              variant="sans"
+              x={CONTENT_X + CONTENT_W}
+              y={contactBottomY}
+              fontSize={fzCV}
+              fill={emailFill}
+              textAnchor="end"
+            >
+              {person.email}
+            </Txt>
+          </g>
+        </>
+      );
+    })(),
 
-    text_left: (
-      <>
-        <g transform={nameTx}>
-          <Txt x={CONTENT_X} y={CONTENT_Y + 28} fontSize={fzName} fontWeight={700} fill={textFill}>
-            {person.name}
-          </Txt>
-        </g>
-        <Logo x={CONTENT_X + CONTENT_W} y={CONTENT_Y} h={48} align="end" />
-        <g transform={titleTx}>
-          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 20} fontSize={fzTitle} fontWeight={700} fill={subFill} letterSpacing="0.14em">
-            {person.title.toUpperCase()}
-          </Txt>
-        </g>
-        <g transform={contactTx}>
-          <Txt x={CONTENT_X + CONTENT_W} y={CONTENT_Y + CONTENT_H - 32} fontSize={fzCV} fill={phoneFill} textAnchor="end">
-            {person.phone}
-          </Txt>
-          <Txt x={CONTENT_X + CONTENT_W} y={CONTENT_Y + CONTENT_H - 14} fontSize={fzCV} fill={emailFill} textAnchor="end">
-            {person.email}
-          </Txt>
-        </g>
-      </>
-    ),
-
-    logo_left: (
-      <>
-        <Logo x={CONTENT_X} y={CONTENT_Y} h={48} align="start" />
-        <g transform={nameTx}>
-          <Txt x={CONTENT_X + CONTENT_W} y={CONTENT_Y + 28} fontSize={fzName} fontWeight={700} fill={textFill} textAnchor="end">
-            {person.name}
-          </Txt>
-        </g>
-        <g transform={titleTx}>
-          <Txt
-            x={CONTENT_X + CONTENT_W}
-            y={CONTENT_Y + CONTENT_H - 20}
-            fontSize={fzTitle}
-            fontWeight={700}
-            fill={subFill}
-            letterSpacing="0.14em"
-            textAnchor="end"
-          >
-            {person.title.toUpperCase()}
-          </Txt>
-        </g>
-        <g transform={contactTx}>
-          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 32} fontSize={fzCV} fill={phoneFill}>
-            {person.phone}
-          </Txt>
-          <Txt x={CONTENT_X} y={CONTENT_Y + CONTENT_H - 14} fontSize={fzCV} fill={emailFill}>
-            {person.email}
-          </Txt>
-        </g>
-      </>
-    ),
   };
 
   return (
@@ -333,7 +377,7 @@ export const CardFront = forwardRef<SVGSVGElement, FrontProps>(function CardFron
       style={{ display: "block" }}
       data-face="front"
     >
-      <CardShell fillDef={c.fill} guides={guides}>
+      <CardShell fillDef={c.fill} guides={guides} bgImage={fs.bgImage}>
         <PatternLayer cfg={fs.pat} w={VB_W} h={VB_H} />
         {layouts[fs.layout]}
       </CardShell>

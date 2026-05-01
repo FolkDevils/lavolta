@@ -9,13 +9,16 @@ export type Person = {
 /** Background palette ids. Actual value on state is `string` so it can
  *  also be an arbitrary #rrggbb custom color. */
 export type ColorId =
-  | "dark"
-  | "white"
-  | "yellow"
+  | "claret"
+  | "cream"
+  | "burgundy"
   | "black"
-  | "pink"
-  | "deep"
-  | "red";
+  | "white"
+  | "gray"
+  | "grayLight"
+  | "grayLine"
+  | "graySoft"
+  | "grayDark";
 
 /** Every color slot is represented as a string:
  *    - a palette option id (e.g. "dark", "yellow")
@@ -32,15 +35,11 @@ export type FrontLayout =
   /** Stack column left-aligned, logo vertically centered on the RIGHT. */
   | "stack_logo_right"
   | "centered"
-  | "bold"
-  /** Name + details left, logo top-right (replaces legacy `editorial`). */
-  | "text_left"
-  /** Logo top-left, name + details right. */
-  | "logo_left";
+  | "bold";
 export type BackLayout = "one_qr" | "two_qr" | "logo_qr" | "type" | "minimal";
 
 /** QR color palette ids. Actual field is `string`, can also be a hex. */
-export type QrColorId = "yellow" | "white" | "black" | "purple" | "pink" | "red";
+export type QrColorId = "claret" | "burgundy" | "cream" | "white" | "black" | "gray";
 
 export type PatternConfig = {
   on: boolean;
@@ -58,6 +57,30 @@ export type QrLink = {
   id: string;
   label: string;
   url: string;
+};
+
+/** Optional full-bleed background photo (front or back), under pattern + ink. */
+export type FaceBgImageConfig = {
+  enabled: boolean;
+  /** Public path under `/public` (e.g. `/brand/BG.png`). */
+  src: string;
+  /** Pan in viewBox units; 0 keeps the image centered. */
+  offsetX: number;
+  offsetY: number;
+  /** Zoom from card center; 1 = cover the card. */
+  scale: number;
+  tintEnabled: boolean;
+  /** Solid overlay on top of the photo (for text legibility). */
+  tintColor: string;
+  tintOpacity: number;
+};
+
+/** CSS-style filter knobs for raster logos (`<image filter={…} />`). */
+export type LogoImageAdjust = {
+  hueRotate: number;
+  brightness: number;
+  saturate: number;
+  contrast: number;
 };
 
 export type FrontState = {
@@ -94,6 +117,10 @@ export type FrontState = {
   fontScaleContactValue: number;
   layout: FrontLayout;
   pat: PatternConfig;
+  /** Optional photo layer between solid fill and pattern/content. */
+  bgImage: FaceBgImageConfig;
+  /** Logo raster color / tone via CSS filter. */
+  logoAdjust: LogoImageAdjust;
 };
 
 /** Legacy single-knob style, kept for migration from older saved state. */
@@ -138,6 +165,8 @@ export type BackState = {
   fontBackDisplay: number;
   fontMinimalLink: number;
   pat: PatternConfig;
+  bgImage: FaceBgImageConfig;
+  logoAdjust: LogoImageAdjust;
 };
 
 export type CardFace = "front" | "back";

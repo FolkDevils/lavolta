@@ -1,4 +1,5 @@
 import type { BackLayout, BackState, FrontLayout, FrontState } from "./types";
+import { CARD_GEOM_SCALE } from "./print";
 import {
   BACK_FONT_CAPTION_DEFAULT,
   BACK_FONT_DISPLAY_DEFAULT,
@@ -9,6 +10,8 @@ import {
   CONTACT_TEL_EMAIL_GAP_DEFAULT,
 } from "./typography";
 
+const G = CARD_GEOM_SCALE;
+
 // ─── Front layouts ───────────────────────────────────────────────────────────
 
 export const FRONT_LAYOUTS: { id: FrontLayout; name: string }[] = [
@@ -17,8 +20,6 @@ export const FRONT_LAYOUTS: { id: FrontLayout; name: string }[] = [
   { id: "stack_logo_right", name: "Stack · Logo right (centered)" },
   { id: "centered", name: "Centered" },
   { id: "bold", name: "Bold Name" },
-  { id: "text_left", name: "Text left · Logo right" },
-  { id: "logo_left", name: "Logo left · Text right" },
 ];
 
 const VALID_FRONT_LAYOUT = new Set<FrontLayout>([
@@ -27,13 +28,12 @@ const VALID_FRONT_LAYOUT = new Set<FrontLayout>([
   "stack_logo_right",
   "centered",
   "bold",
-  "text_left",
-  "logo_left",
 ]);
 
-/** Map legacy layout ids; clamp unknown values to `stack`. */
+/** Map legacy/removed layout ids → the closest current layout. */
 export function normalizeFrontLayout(layout: unknown): FrontLayout {
-  if (layout === "editorial") return "text_left";
+  if (layout === "editorial" || layout === "text_left") return "stack";
+  if (layout === "logo_left") return "stack_logo_left";
   if (VALID_FRONT_LAYOUT.has(layout as FrontLayout)) return layout as FrontLayout;
   return "stack";
 }
@@ -158,43 +158,50 @@ const FRONT_NEUTRAL_DEFAULTS: FrontLayoutDefaults = {
  *  To tune a layout for a single person, add an entry to
  *  `PERSON_FRONT_LAYOUT_OVERRIDES` below — it merges on top of these. */
 export const FRONT_LAYOUT_DEFAULTS: Record<FrontLayout, FrontLayoutDefaults> = {
+  /** Tuned La Volta stack preset (logo + text position from design panel). */
   stack: {
     ...FRONT_NEUTRAL_DEFAULTS,
+    logoScale: 2.3,
+    logoOffsetX: -89,
+    logoOffsetY: 66,
+    textOffsetX: 0,
+    nameTitleBlockOffsetY: 83,
+    nameTitleGap: 44,
+    contactOffsetY: 0,
+    contactTelEmailGap: 68,
   },
   stack_logo_left: {
     ...FRONT_NEUTRAL_DEFAULTS,
-    logoScale: 1.55,
-    logoOffsetX: 16,
-    logoOffsetY: 3,
+    logoScale: 1.15,
+    logoOffsetX: 0,
+    logoOffsetY: 0,
   },
   stack_logo_right: {
     ...FRONT_NEUTRAL_DEFAULTS,
-    logoScale: 1.55,
-    logoOffsetX: -32,
-    logoOffsetY: 3,
+    logoScale: 1.15,
+    logoOffsetX: 0,
+    logoOffsetY: 0,
   },
+  /** Tuned from exported Suyin Royer centered preset (person settings file). */
   centered: {
     ...FRONT_NEUTRAL_DEFAULTS,
-    logoScale: 2,
-    logoOffsetY: 12,
-    nameTitleBlockOffsetY: 30,
-    nameTitleGap: NAME_TITLE_GAP_DEFAULT_CENTERED,
-    contactOffsetY: 10,
-    fontScaleName: 1.05,
+    logoScale: 1.75,
+    logoOffsetX: 1,
+    logoOffsetY: 76,
+    textOffsetX: 0,
+    nameTitleBlockOffsetY: 75,
+    nameTitleGap: 41,
+    contactOffsetY: 99,
+    contactTelEmailGap: 73,
+    fontScaleName: 1.1,
     fontScaleTitle: 1.1,
-    fontScaleContactLabel: 1,
+    fontScaleContactLabel: 1.05,
     fontScaleContactValue: 1.1,
   },
   bold: {
     ...FRONT_NEUTRAL_DEFAULTS,
-    logoScale: 0.9,
+    logoScale: 1.2,
     nameTitleGap: NAME_TITLE_GAP_DEFAULT_BOLD,
-  },
-  text_left: {
-    ...FRONT_NEUTRAL_DEFAULTS,
-  },
-  logo_left: {
-    ...FRONT_NEUTRAL_DEFAULTS,
   },
 };
 

@@ -3,7 +3,10 @@ import type { BackState, FrontState, Person } from "./types";
 /** Bump when the export envelope shape changes. */
 export const PERSON_SETTINGS_SCHEMA_VERSION = 1 as const;
 
-export const PERSON_SETTINGS_FILE_APP_ID = "fd-bcb-person-settings" as const;
+export const PERSON_SETTINGS_FILE_APP_ID = "lavolta-bcb-person-settings" as const;
+
+/** Legacy Folk Devils exports still import cleanly. */
+export const LEGACY_PERSON_SETTINGS_FILE_APP_ID = "fd-bcb-person-settings" as const;
 
 /** JSON file written by “Download settings” for one person. */
 export type PersonSettingsFileV1 = {
@@ -66,8 +69,11 @@ export function parsePersonSettingsFile(data: unknown): ParsePersonSettingsResul
       error: `Unsupported schemaVersion (got ${String(v)}, need ${PERSON_SETTINGS_SCHEMA_VERSION}).`,
     };
   }
-  if (data.app !== PERSON_SETTINGS_FILE_APP_ID) {
-    return { ok: false, error: "Not a Folk Devils person settings file (wrong app id)." };
+  if (
+    data.app !== PERSON_SETTINGS_FILE_APP_ID &&
+    data.app !== LEGACY_PERSON_SETTINGS_FILE_APP_ID
+  ) {
+    return { ok: false, error: "Not a La Volta person settings file (wrong app id)." };
   }
   const p = data.person;
   if (!isRecord(p)) {

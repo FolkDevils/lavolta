@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-# Folk Devils Business Card Generator — Agent Reference
+# La Volta Business Card Generator — Agent Reference
 
 > This file is the authoritative source of truth for AI agents working on this codebase. Read it in full before making any changes.
 
@@ -25,9 +25,9 @@ npx eslint src --ext .ts,.tsx --max-warnings 0  # lint (zero warnings policy)
 
 ## Project overview
 
-A Next.js 16 / React 19 web app that lets Folk Devils staff design and export print-ready business cards. Each person gets independently configurable front and back card faces. State is persisted to `localStorage`. Export targets: SVG, 300-DPI PNG, and MOO-compatible full-bleed PDF.
+A Next.js 16 / React 19 web app that lets La Volta staff design and export print-ready business cards. Each person gets independently configurable front and back card faces. State is persisted to `localStorage`. Export targets: SVG, 300-DPI PNG, and MOO-compatible full-bleed PDF.
 
-- **Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS
+- **Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS (Newsreader + Red Hat Text on card SVG)
 - **Key deps:** `jspdf` (PDF export), `qrcode` (QR generation), no Redux/Zustand — state lives in a single custom hook
 
 ---
@@ -96,14 +96,14 @@ All types are in `src/lib/types.ts`. The core shapes:
 
 ```ts
 Person       { id, name, title, phone, email }
-FrontState   { layout, color, logo, logoScale, logoOffset*, textOffset*, fontScale*, textFill, pat, … }
-BackState    { layout, color, logo, qrColor, qrBody, qrEyeFrame, qrEyeBall, qrLinks, qrLinkIds, fontQrCaption, pat, … }
+FrontState   { layout, color, logo, logoScale, logoOffset*, logoAdjust, textOffset*, fontScale*, textFill, pat, bgImage, … }
+BackState    { layout, color, logo, logoAdjust, qrColor, qrBody, qrEyeFrame, qrEyeBall, qrLinks, qrLinkIds, fontQrCaption, pat, bgImage, … }
 PatternConfig{ on, f1, f2, f3, density, size, rot, opacity, seed }
 QrLink       { id, label, url }
 ColorValue   = ColorId | `#${string}`  (palette id OR custom hex)
 ```
 
-State is stored in `localStorage` under key `STORAGE_KEY = "fd_bcb_v4"` as:
+State is stored in `localStorage` under key `STORAGE_KEY = "lavolta_bcb_v1"` as:
 ```ts
 { people, frontByPersonId, backByPersonId, selectedId }
 ```
@@ -221,9 +221,8 @@ Body container: `flex flex-col lg:flex-row`. Card section: `shrink-0 lg:flex-1`.
 
 ## Tailwind conventions
 
-- Brand yellow: `#ffd000` — use `text-[#ffd000]`, `bg-[#ffd000]`, `border-[rgba(255,208,0,0.2)]`
-- Dark backgrounds: `#0d0007` (page), `#130009` (rails), `#200016` (header)
-- Text hierarchy: `text-[rgba(255,208,0,0.9)]` → `0.55` → `0.35` → `0.22`
+- Brand cream / burgundy: `#F6F4E8`, `#6B1E2D` — see `globals.css` `--lv-*` tokens
+- Dark UI: `#1f1c1a` (page), `#2c2826` (rails / header)
 - No magic numbers outside the design system — prefer Tailwind arbitrary values over inline styles
 
 ## Lint rules to know
@@ -247,5 +246,5 @@ Always use `@/` alias for cross-module imports:
 ## Things NOT to change without discussion
 
 - `STORAGE_KEY` — changing it invalidates all user-saved data in the browser
-- The `VB_W` / `VB_H` viewBox (600×360) — card print math depends on it
+- The `VB_W` / `VB_H` viewBox (920×1400 for 5.5″×8.5″ finished + bleed) — card print math depends on it
 - `DEFAULT_PEOPLE` ids (1, 2, 3) — per-person tuning in `defaults.ts` and `typography.ts` is id-keyed

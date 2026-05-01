@@ -17,3 +17,5 @@ export * from "./layouts";
 export * from "./typography";
 export * from "./defaults";
 export * from "./storage";
+export * from "./faceBg";
+export * from "./logoFilter";

@@ -45,7 +45,7 @@ export function LogoPicker({
   return (
     <div>
       <SectionLabel>Logo</SectionLabel>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         {LOGOS.map((lg) => {
           const sel = logo === lg.id;
           return (
@@ -56,8 +56,8 @@ export function LogoPicker({
               title={lg.label}
               className={`p-2 rounded flex flex-col items-center gap-1 transition border
                 ${sel
-                  ? "bg-[rgba(255,208,0,0.1)] border-[#ffd000]"
-                  : "bg-[rgba(255,255,255,0.03)] border-[rgba(255,208,0,0.1)] hover:border-[rgba(255,208,0,0.3)]"}`}
+                  ? "bg-[rgba(246,244,232,0.1)] border-[#F6F4E8]"
+                  : "bg-[rgba(255,255,255,0.03)] border-[rgba(246,244,232,0.12)] hover:border-[rgba(246,244,232,0.35)]"}`}
             >
               <div className="h-6 flex items-center justify-center">
                 {lg.src ? (
@@ -70,12 +70,12 @@ export function LogoPicker({
                     unoptimized
                   />
                 ) : (
-                  <div className="text-[10px] text-[rgba(255,208,0,0.3)]">—</div>
+                  <div className="text-[10px] text-[rgba(246,244,232,0.3)]">—</div>
                 )}
               </div>
               <div
                 className={`text-[7.5px] uppercase tracking-[0.06em] leading-tight text-center ${
-                  sel ? "text-[#ffd000]" : "text-[rgba(255,208,0,0.4)]"
+                  sel ? "text-[#F6F4E8]" : "text-[rgba(246,244,232,0.4)]"
                 }`}
               >
                 {lg.label}
@@ -118,7 +118,7 @@ export function LogoPicker({
             <button
               type="button"
               onClick={onResetPosition}
-              className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.45)] hover:text-[#ffd000]"
+              className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.45)] hover:text-[#F6F4E8]"
             >
               Reset position
             </button>

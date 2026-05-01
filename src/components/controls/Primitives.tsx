@@ -6,7 +6,7 @@ export function SectionLabel({ children, mb = 8 }: { children: ReactNode; mb?: n
   return (
     <div
       style={{ marginBottom: mb }}
-      className="text-[9px] font-bold uppercase tracking-[0.14em] text-[rgba(255,208,0,0.42)]"
+      className="text-[9px] font-bold uppercase tracking-[0.14em] text-[rgba(246,244,232,0.42)]"
     >
       {children}
     </div>
@@ -14,7 +14,7 @@ export function SectionLabel({ children, mb = 8 }: { children: ReactNode; mb?: n
 }
 
 export function Divider() {
-  return <div className="h-px bg-[rgba(255,208,0,0.08)] my-1" />;
+  return <div className="h-px bg-[rgba(246,244,232,0.08)] my-1" />;
 }
 
 type ChipRowProps<T extends string> = {
@@ -34,8 +34,8 @@ export function ChipRow<T extends string>({ options, value, onChange }: ChipRowP
             onClick={() => onChange(o.id)}
             className={`px-3 py-2 rounded-md text-[10px] uppercase tracking-[0.06em] min-h-[34px] transition
               ${sel
-                ? "bg-[#ffd000] text-[#440031] font-bold shadow-[0_0_0_1px_rgba(255,208,0,0.8)]"
-                : "bg-[rgba(255,208,0,0.05)] border border-[rgba(255,208,0,0.1)] text-[rgba(255,208,0,0.65)] hover:text-[#ffd000] hover:border-[rgba(255,208,0,0.35)]"}`}
+                ? "bg-[#F6F4E8] text-[#6B1E2D] font-bold shadow-[0_0_0_1px_rgba(246,244,232,0.8)]"
+                : "bg-[rgba(246,244,232,0.05)] border border-[rgba(246,244,232,0.1)] text-[rgba(246,244,232,0.65)] hover:text-[#F6F4E8] hover:border-[rgba(246,244,232,0.35)]"}`}
           >
             {o.name}
           </button>
@@ -104,11 +104,11 @@ export function FDRange({
   return (
     <div className={`flex flex-col gap-1 ${disabled ? "opacity-45" : ""}`}>
       <div className="flex justify-between items-center gap-2">
-        <span className="text-[10px] uppercase tracking-[0.08em] text-[rgba(255,208,0,0.55)] truncate">
+        <span className="text-[10px] uppercase tracking-[0.08em] text-[rgba(246,244,232,0.55)] truncate">
           {label}
         </span>
         {readOnlyNumber ? (
-          <span className="text-[10px] font-bold text-[#ffd000] tabular-nums whitespace-nowrap">
+          <span className="text-[10px] font-bold text-[#F6F4E8] tabular-nums whitespace-nowrap">
             {formatLabel ? formatLabel(clamped) : `${clamped}${unit}`}
           </span>
         ) : (
@@ -219,9 +219,9 @@ function NumberEditor({
       }}
       onChange={(e) => setDraft(e.target.value)}
       onKeyDown={onKeyDown}
-      className={`w-[58px] text-right bg-[rgba(255,208,0,0.04)] border border-[rgba(255,208,0,0.12)]
-                  rounded px-1.5 py-0.5 text-[11px] font-bold text-[#ffd000] tabular-nums leading-tight
-                  hover:border-[rgba(255,208,0,0.35)] focus:border-[#ffd000] focus:bg-[rgba(255,208,0,0.08)]
+      className={`w-[58px] text-right bg-[rgba(246,244,232,0.04)] border border-[rgba(246,244,232,0.12)]
+                  rounded px-1.5 py-0.5 text-[11px] font-bold text-[#F6F4E8] tabular-nums leading-tight
+                  hover:border-[rgba(246,244,232,0.35)] focus:border-[#F6F4E8] focus:bg-[rgba(246,244,232,0.08)]
                   outline-none transition disabled:opacity-50 disabled:cursor-not-allowed`}
     />
   );

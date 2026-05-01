@@ -3,6 +3,8 @@
 import { useId } from "react";
 import { BLEED, SAFE_INSET, VB_H, VB_W } from "@/lib/constants";
 import type { COLORS } from "@/lib/constants";
+import type { FaceBgImageConfig } from "@/lib/types";
+import { toHex6 } from "@/lib/color";
 
 // ─── Layout geometry constants ───────────────────────────────────────────────
 
@@ -30,6 +32,31 @@ export function fillFor(def: FillDef, gradId: string) {
   return def.type === "solid" ? def.color : `url(#${gradId})`;
 }
 
+function FaceBackgroundImage({ cfg }: { cfg: FaceBgImageConfig }) {
+  if (!cfg.enabled || !cfg.src) return null;
+  const tint =
+    cfg.tintEnabled && cfg.tintOpacity > 0
+      ? { fill: toHex6(cfg.tintColor), opacity: cfg.tintOpacity }
+      : null;
+  return (
+    <g pointerEvents="none">
+      <g
+        transform={`translate(${VB_W / 2 + cfg.offsetX} ${VB_H / 2 + cfg.offsetY}) scale(${cfg.scale}) translate(${-VB_W / 2} ${-VB_H / 2})`}
+      >
+        <image
+          href={cfg.src}
+          x={0}
+          y={0}
+          width={VB_W}
+          height={VB_H}
+          preserveAspectRatio="xMidYMid slice"
+        />
+      </g>
+      {tint ? <rect x={0} y={0} width={VB_W} height={VB_H} fill={tint.fill} fillOpacity={tint.opacity} /> : null}
+    </g>
+  );
+}
+
 // ─── CardShell ───────────────────────────────────────────────────────────────
 
 /** Base SVG shell: background fill, bleed mask, optional guides. */
@@ -37,10 +64,13 @@ export function CardShell({
   children,
   fillDef,
   guides,
+  bgImage,
 }: {
   children: React.ReactNode;
   fillDef: FillDef;
   guides?: boolean;
+  /** Optional photo between solid fill and `children` (pattern + ink). */
+  bgImage?: FaceBgImageConfig;
 }) {
   const rawId = useId();
   const uid = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -55,7 +85,10 @@ export function CardShell({
         </clipPath>
       </defs>
       <rect x={0} y={0} width={VB_W} height={VB_H} fill={fillFor(fillDef, gradId)} />
-      <g clipPath={`url(#${clipId})`}>{children}</g>
+      <g clipPath={`url(#${clipId})`}>
+        {bgImage ? <FaceBackgroundImage cfg={bgImage} /> : null}
+        {children}
+      </g>
       {guides ? (
         <g pointerEvents="none">
           <rect
@@ -86,10 +119,18 @@ export function CardShell({
 
 // ─── Typography helper ───────────────────────────────────────────────────────
 
-type TxtProps = React.SVGProps<SVGTextElement> & { children: React.ReactNode };
-export function Txt({ children, ...p }: TxtProps) {
+type TxtProps = React.SVGProps<SVGTextElement> & {
+  children: React.ReactNode;
+  /** Display serif (name, titles) vs sans (contact, captions). */
+  variant?: "serif" | "sans";
+};
+export function Txt({ children, variant = "serif", ...p }: TxtProps) {
+  const stack =
+    variant === "sans"
+      ? "var(--font-red-hat), 'Red Hat Text', ui-sans-serif, system-ui, sans-serif"
+      : "var(--font-newsreader), Newsreader, ui-serif, Georgia, serif";
   return (
-    <text fontFamily="Rubik, sans-serif" {...p}>
+    <text fontFamily={stack} {...p}>
       {children}
     </text>
   );

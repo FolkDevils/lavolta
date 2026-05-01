@@ -75,7 +75,7 @@ export function TextColorBlock({
         <button
           type="button"
           onClick={onResetBoth}
-          className="text-[9px] uppercase tracking-[0.1em] text-left text-[rgba(255,208,0,0.4)] hover:text-[#ffd000]"
+          className="text-[9px] uppercase tracking-[0.1em] text-left text-[rgba(246,244,232,0.4)] hover:text-[#F6F4E8]"
         >
           Reset primary + secondary
         </button>
@@ -83,7 +83,7 @@ export function TextColorBlock({
 
       {showContact && (
         <>
-          <div className="border-t border-[rgba(255,208,0,0.08)] pt-3">
+          <div className="border-t border-[rgba(246,244,232,0.08)] pt-3">
             <SectionLabel>Phone</SectionLabel>
             <ColorSelect
               value={phoneFill ?? null}
@@ -107,7 +107,7 @@ export function TextColorBlock({
             <button
               type="button"
               onClick={onResetContact}
-              className="text-[9px] uppercase tracking-[0.1em] text-left text-[rgba(255,208,0,0.4)] hover:text-[#ffd000]"
+              className="text-[9px] uppercase tracking-[0.1em] text-left text-[rgba(246,244,232,0.4)] hover:text-[#F6F4E8]"
             >
               Reset phone + email to primary
             </button>

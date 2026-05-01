@@ -1,35 +1,35 @@
 @import "tailwindcss";
 
-/* ─── Folk Devils Design Tokens ────────────────────────────── */
+/* ─── La Volta design tokens ───────────────────────────────── */
 :root {
-  --fd-purple-dark:    #650049;
-  --fd-purple-darker:  #29001d;
-  --fd-purple-darkest: #440031;
-  --fd-purple-mid:     #5a0044;
-  --fd-purple-ink:     #200016;
-  --fd-purple-abyss:   #130009;
-  --fd-purple-void:    #0d0007;
-  --fd-purple-night:   #100008;
+  --lv-cream:          #F6F4E8;
+  --lv-burgundy:       #6B1E2D;
+  --lv-black:          #000000;
+  --lv-white:          #FFFFFF;
+  --lv-gray:           #666666;
+  --lv-charcoal:       #383838;
+  --lv-panel:          #2c2826;
+  --lv-panel-deep:     #1f1c1a;
+  --lv-accent:         #F6F4E8;
+  --lv-accent-muted:   rgba(246, 244, 232, 0.55);
 
-  --fd-yellow:         #ffd000;
-  --fd-yellow-bright:  #fff720;
-
-  --fd-pink:           #ff58cd;
-  --fd-red:            #ff0011;
-  --fd-green:          #00976c;
-
-  --fd-black:          #000000;
-  --fd-white:          #ffffff;
+  /* Legacy aliases (some controls still reference --fd-*) */
+  --fd-yellow:         var(--lv-accent);
+  --fd-yellow-bright:  #ffffff;
+  --fd-purple-darkest: var(--lv-burgundy);
+  --fd-purple-mid:     #8a3345;
+  --fd-purple-abyss:   var(--lv-panel);
+  --fd-purple-void:    var(--lv-panel-deep);
+  --fd-purple-night:   #242120;
 }
-
 @theme inline {
-  --font-sans: var(--font-rubik);
-  --color-fd-yellow: var(--fd-yellow);
-  --color-fd-purple: var(--fd-purple-darkest);
-  --color-fd-ink: var(--fd-purple-ink);
-  --color-fd-abyss: var(--fd-purple-abyss);
-  --color-fd-void: var(--fd-purple-void);
-  --color-fd-night: var(--fd-purple-night);
+  --font-sans: var(--font-red-hat), ui-sans-serif, system-ui, sans-serif;
+  --color-fd-yellow: var(--lv-accent);
+  --color-fd-purple: var(--lv-burgundy);
+  --color-fd-ink: var(--lv-charcoal);
+  --color-fd-abyss: var(--lv-panel);
+  --color-fd-void: var(--lv-panel-deep);
+  --color-fd-night: var(--lv-panel-deep);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -37,9 +37,9 @@
 html, body { margin: 0; padding: 0; }
 
 body {
-  font-family: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
-  background: var(--fd-purple-night);
-  color: #fff;
+  font-family: var(--font-red-hat), "Red Hat Text", ui-sans-serif, system-ui, sans-serif;
+  background: var(--lv-panel-deep);
+  color: var(--lv-cream);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -47,8 +47,8 @@ body {
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--fd-purple-darkest); border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: var(--fd-purple-mid); }
+::-webkit-scrollbar-thumb { background: var(--lv-burgundy); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #8a3345; }
 
 /* Sliders — touch friendly with a tall invisible hit area so fingers
  * can grab the thumb comfortably on mobile without shrinking the
@@ -66,19 +66,19 @@ input[type=range] {
 input[type=range]::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 208, 0, 0.16);
-  border: 1px solid rgba(255, 208, 0, 0.08);
+  background: rgba(246, 244, 232, 0.12);
+  border: 1px solid rgba(246, 244, 232, 0.08);
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
-  background: var(--fd-yellow);
+  background: var(--lv-cream);
   border-radius: 50%;
   cursor: pointer;
   margin-top: -8px;           /* center the thumb on a 4px track */
   box-shadow:
-    0 0 0 2px rgba(255, 208, 0, 0.22),
+    0 0 0 2px rgba(246, 244, 232, 0.2),
     0 1px 4px rgba(0, 0, 0, 0.55);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -88,31 +88,31 @@ input[type=range]::-webkit-slider-thumb:hover {
 input[type=range]:active::-webkit-slider-thumb {
   transform: scale(1.15);
   box-shadow:
-    0 0 0 3px rgba(255, 208, 0, 0.35),
+    0 0 0 3px rgba(246, 244, 232, 0.28),
     0 2px 6px rgba(0, 0, 0, 0.6);
 }
 input[type=range]::-moz-range-track {
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 208, 0, 0.16);
-  border: 1px solid rgba(255, 208, 0, 0.08);
+  background: rgba(246, 244, 232, 0.12);
+  border: 1px solid rgba(246, 244, 232, 0.08);
 }
 input[type=range]::-moz-range-thumb {
   width: 18px;
   height: 18px;
-  background: var(--fd-yellow);
+  background: var(--lv-cream);
   border-radius: 50%;
   cursor: pointer;
   border: none;
   box-shadow:
-    0 0 0 2px rgba(255, 208, 0, 0.22),
+    0 0 0 2px rgba(246, 244, 232, 0.2),
     0 1px 4px rgba(0, 0, 0, 0.55);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 input[type=range]:active::-moz-range-thumb {
   transform: scale(1.15);
   box-shadow:
-    0 0 0 3px rgba(255, 208, 0, 0.35),
+    0 0 0 3px rgba(246, 244, 232, 0.28),
     0 2px 6px rgba(0, 0, 0, 0.6);
 }
 input[type=range]:disabled {
@@ -125,7 +125,7 @@ input[type=range]:disabled::-moz-range-thumb { opacity: 0.45; }
 button:focus-visible,
 input:focus-visible,
 [role="button"]:focus-visible {
-  outline: 2px solid var(--fd-yellow);
+  outline: 2px solid var(--lv-cream);
   outline-offset: 2px;
 }
 

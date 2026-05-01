@@ -1,25 +1,31 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Newsreader, Red_Hat_Text } from "next/font/google";
 import "./globals.css";
 
-const rubik = localFont({
-  src: "../../public/fonts/Rubik-VariableFont_wght.ttf",
-  variable: "--font-rubik",
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-newsreader",
   display: "swap",
-  weight: "300 900",
+});
+
+const redHat = Red_Hat_Text({
+  subsets: ["latin"],
+  variable: "--font-red-hat",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Folk Devils — Business Card Builder",
+  title: "La Volta — Business Card Builder",
   description:
-    "Design print-ready Folk Devils business cards. Export SVG, PNG (300 DPI) and MOO-compatible PDF with bleed.",
+    "Design print-ready La Volta business cards. Export SVG, PNG (300 DPI) and MOO-compatible PDF with bleed.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${rubik.variable} h-full`}>
+    <html lang="en" className={`${newsreader.variable} ${redHat.variable} h-full`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

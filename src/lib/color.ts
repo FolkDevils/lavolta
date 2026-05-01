@@ -63,9 +63,9 @@ export function luminance(hex: string): number {
   return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b);
 }
 
-/** Returns #ffffff or a near-black that reads on the given bg. */
+/** Returns light or dark ink that reads on the given solid bg. */
 export function readableText(bgHex: string): string {
-  return luminance(bgHex) > 0.55 ? "#200016" : "#ffffff";
+  return luminance(bgHex) > 0.55 ? "#383838" : "#F6F4E8";
 }
 
 /** Return an rgba() derived from a hex by applying alpha. */

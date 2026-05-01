@@ -6,14 +6,14 @@ import { BLEED_IN, DPI, FINISHED_H_IN, FINISHED_W_IN, PX_H, PX_W, VB_H, VB_W } f
  * Export helpers
  *
  * The editor renders each card face as a real SVG DOM node at the
- * print viewBox (600×360, = 3.75"×2.25" including 0.125" bleed).
+ * print viewBox (1400×920, = 8.75"×5.75" including 0.125" bleed).
  * Because the source is vector, every exporter here just consumes
  * that same SVG element:
  *
  *  - exportSvg  → serialize + embed font → download .svg
  *  - exportPng  → rasterize via <canvas> at 300 DPI → download .png
  *  - exportPdf  → embed 300 DPI rasters inside a PDF whose pages
- *                 are exactly 3.75"×2.25" (MOO full-bleed size)
+ *                 match the bleed size (8.75"×5.75")
  *
  * MOO's uploader accepts PDF/PNG at the bleed size, CMYK-preferred
  * but sRGB/RGB works too. 300 DPI is plenty for crisp print.
@@ -241,9 +241,8 @@ export async function exportPng(svg: SVGSVGElement, filename: string) {
 }
 
 /**
- * Build a 2-page PDF at the MOO bleed size (3.75"×2.25"), page 1 =
- * front, page 2 = back. Cards are rasterized at 300 DPI and drawn
- * to fill the whole page (bleed included). MOO accepts this.
+ * Build a 2-page PDF at full bleed (5.75"×8.75"), page 1 = front,
+ * page 2 = back. Rasterized at 300 DPI to fill each page.
  */
 export async function exportPdf(
   frontSvg: SVGSVGElement,
@@ -271,25 +270,26 @@ export async function exportPdf(
     blobToDataUrl(backPng),
   ]);
 
+  const pageW = FINISHED_W_IN + 2 * BLEED_IN;
+  const pageH = FINISHED_H_IN + 2 * BLEED_IN;
+  const pageOrientation = pageH >= pageW ? "portrait" : "landscape";
+
   const pdf = new JsPDF({
-    orientation: "landscape",
+    orientation: pageOrientation,
     unit: "in",
-    format: [FINISHED_W_IN + 2 * BLEED_IN, FINISHED_H_IN + 2 * BLEED_IN],
+    format: [pageW, pageH],
     compress: true,
   });
 
-  const pageW = FINISHED_W_IN + 2 * BLEED_IN;
-  const pageH = FINISHED_H_IN + 2 * BLEED_IN;
-
   pdf.addImage(frontDataUrl, "PNG", 0, 0, pageW, pageH, undefined, "FAST");
-  pdf.addPage([pageW, pageH], "landscape");
+  pdf.addPage([pageW, pageH], pageOrientation);
   pdf.addImage(backDataUrl, "PNG", 0, 0, pageW, pageH, undefined, "FAST");
 
   pdf.setProperties({
     title: filename.replace(/\.pdf$/i, ""),
     subject: `Business Card — ${FINISHED_W_IN}" × ${FINISHED_H_IN}" finished, ${BLEED_IN}" bleed`,
-    creator: "Folk Devils Business Card Builder",
-    author: "Folk Devils",
+    creator: "La Volta Business Card Builder",
+    author: "La Volta",
   });
 
   /* Use output('blob') + our own download() so we can reliably fire the

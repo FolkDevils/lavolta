@@ -12,7 +12,7 @@ export function useExport(person: Person | undefined) {
   const backSvgRef = useRef<SVGSVGElement>(null);
 
   const nameForFile = (ext: string) =>
-    `folkdevils_${(person?.name || "card").toLowerCase().replace(/[^a-z0-9]+/g, "_")}.${ext}`;
+    `lavolta_${(person?.name || "card").toLowerCase().replace(/[^a-z0-9]+/g, "_")}.${ext}`;
 
   const handleExport = async (
     kind: "svg" | "png" | "pdf",

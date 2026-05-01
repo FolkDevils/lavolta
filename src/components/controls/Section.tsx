@@ -60,8 +60,8 @@ export function Section({
     <section
       className={`rounded-lg border transition-colors ${
         open
-          ? "border-[rgba(255,208,0,0.18)] bg-[rgba(255,208,0,0.02)]"
-          : "border-[rgba(255,208,0,0.08)] bg-transparent"
+          ? "border-[rgba(246,244,232,0.18)] bg-[rgba(246,244,232,0.02)]"
+          : "border-[rgba(246,244,232,0.08)] bg-transparent"
       }`}
     >
       <button
@@ -69,23 +69,23 @@ export function Section({
         aria-expanded={open}
         aria-controls={`sec-${id}`}
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left rounded-lg hover:bg-[rgba(255,208,0,0.04)] transition"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left rounded-lg hover:bg-[rgba(246,244,232,0.04)] transition"
       >
         <span className="flex items-center gap-2 min-w-0">
-          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(255,208,0,0.9)]">
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[rgba(246,244,232,0.9)]">
             {title}
           </span>
           {edited ? (
             <span
               aria-label="Edited"
               title="This section has custom values"
-              className="h-1.5 w-1.5 rounded-full bg-[#ffd000] shrink-0"
+              className="h-1.5 w-1.5 rounded-full bg-[#F6F4E8] shrink-0"
             />
           ) : null}
         </span>
         <span className="flex items-center gap-2 min-w-0 shrink-0">
           {summary ? (
-            <span className="text-[9px] uppercase tracking-[0.08em] text-[rgba(255,208,0,0.45)] truncate max-w-[160px]">
+            <span className="text-[9px] uppercase tracking-[0.08em] text-[rgba(246,244,232,0.45)] truncate max-w-[160px]">
               {summary}
             </span>
           ) : null}
@@ -103,7 +103,7 @@ export function Section({
               strokeWidth={1.5}
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-[rgba(255,208,0,0.55)]"
+              className="text-[rgba(246,244,232,0.55)]"
             />
           </svg>
         </span>
@@ -112,7 +112,7 @@ export function Section({
       {open ? (
         <div
           id={`sec-${id}`}
-          className="px-3 pb-3 pt-1 border-t border-[rgba(255,208,0,0.06)] flex flex-col gap-3"
+          className="px-3 pb-3 pt-1 border-t border-[rgba(246,244,232,0.06)] flex flex-col gap-3"
         >
           {children}
         </div>
@@ -126,7 +126,7 @@ export function Section({
  *  Replaces the old `SectionLabel` when used inside a Section. */
 export function SubLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[rgba(255,208,0,0.52)]">
+    <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[rgba(246,244,232,0.52)]">
       {children}
     </div>
   );

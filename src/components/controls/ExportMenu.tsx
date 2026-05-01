@@ -45,7 +45,7 @@ export function ExportMenu({ onExport, exporting }: Props) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={!!exporting}
-        className="bg-[#ffd000] text-[#440031] text-[11px] font-bold uppercase tracking-[0.1em] px-4 py-1.5 rounded-sm hover:bg-[#fff720] transition disabled:opacity-60"
+        className="bg-[#F6F4E8] text-[#6B1E2D] text-[11px] font-bold uppercase tracking-[0.1em] px-4 py-1.5 rounded-sm hover:bg-[#ffffff] transition disabled:opacity-60"
       >
         {exporting ? `Exporting ${exporting.toUpperCase()}…` : "Download ▾"}
       </button>
@@ -53,7 +53,7 @@ export function ExportMenu({ onExport, exporting }: Props) {
       {open && !exporting && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-1 z-[100] w-[230px] bg-[#200016] border border-[rgba(255,208,0,0.2)] rounded-md shadow-xl overflow-hidden"
+          className="absolute right-0 top-full mt-1 z-[100] w-[230px] bg-[#200016] border border-[rgba(246,244,232,0.2)] rounded-md shadow-xl overflow-hidden"
         >
           <MenuGroup title="Print-ready (with bleed)">
             <MenuItem label="PDF — front + back" onClick={() => run("pdf", "both")} hint="For MOO upload" />
@@ -72,8 +72,8 @@ export function ExportMenu({ onExport, exporting }: Props) {
 
 function MenuGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border-b border-[rgba(255,208,0,0.08)] last:border-b-0">
-      <div className="px-3 pt-2.5 pb-1 text-[8px] uppercase tracking-[0.14em] text-[rgba(255,208,0,0.4)]">
+    <div className="border-b border-[rgba(246,244,232,0.08)] last:border-b-0">
+      <div className="px-3 pt-2.5 pb-1 text-[8px] uppercase tracking-[0.14em] text-[rgba(246,244,232,0.4)]">
         {title}
       </div>
       <div className="pb-1">{children}</div>
@@ -94,11 +94,11 @@ function MenuItem({
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left px-3 py-2 text-[11px] text-[rgba(255,208,0,0.85)] hover:bg-[rgba(255,208,0,0.08)] hover:text-[#ffd000] flex justify-between items-center gap-2"
+      className="w-full text-left px-3 py-2 text-[11px] text-[rgba(246,244,232,0.85)] hover:bg-[rgba(246,244,232,0.08)] hover:text-[#F6F4E8] flex justify-between items-center gap-2"
     >
       <span>{label}</span>
       {hint ? (
-        <span className="text-[8px] uppercase tracking-[0.1em] text-[rgba(255,208,0,0.4)]">
+        <span className="text-[8px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)]">
           {hint}
         </span>
       ) : null}

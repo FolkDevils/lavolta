@@ -14,7 +14,7 @@ const COG_24_PATH =
  * in the editor (card bg, QR fg, text primary, text secondary, …).
  *
  * Each slot gets:
- *   - a row of palette "chips" (matching the Folk Devils swatch look)
+ *   - a row of palette "chips" (La Volta swatch look)
  *   - a Custom chip with an inline native color picker
  *   - an optional Default chip that clears to null (palette inherit)
  *
@@ -66,7 +66,7 @@ export function ColorSelect({
           label={nullable.label ?? "Default"}
           onClick={() => onChange(null)}
           swatch={
-            <div className="w-6 h-6 rounded-sm border border-dashed border-[rgba(255,208,0,0.35)] flex items-center justify-center text-[10px] text-[rgba(255,208,0,0.45)]">
+            <div className="w-6 h-6 rounded-sm border border-dashed border-[rgba(246,244,232,0.35)] flex items-center justify-center text-[10px] text-[rgba(246,244,232,0.45)]">
               ×
             </div>
           }
@@ -84,7 +84,7 @@ export function ColorSelect({
               className="w-6 h-6 rounded-sm"
               style={{
                 background: o.swatch,
-                border: "1px solid rgba(255,208,0,0.18)",
+                border: "1px solid rgba(246,244,232,0.18)",
               }}
             />
           }
@@ -121,13 +121,13 @@ function Chip({
       title={label}
       className={`flex flex-col items-center gap-1 px-2 py-1.5 rounded transition border
         ${selected
-          ? "bg-[rgba(255,208,0,0.12)] border-[#ffd000]"
-          : "bg-transparent border-[rgba(255,208,0,0.1)] hover:border-[rgba(255,208,0,0.3)]"}`}
+          ? "bg-[rgba(246,244,232,0.12)] border-[#F6F4E8]"
+          : "bg-transparent border-[rgba(246,244,232,0.1)] hover:border-[rgba(246,244,232,0.3)]"}`}
     >
       {swatch}
       <span
         className={`text-[8px] uppercase tracking-[0.06em] leading-none ${
-          selected ? "text-[#ffd000] font-bold" : "text-[rgba(255,208,0,0.45)]"
+          selected ? "text-[#F6F4E8] font-bold" : "text-[rgba(246,244,232,0.45)]"
         }`}
       >
         {label}
@@ -157,13 +157,13 @@ function CustomChip({
       title="Custom color"
       className={`relative flex flex-col items-center gap-1 px-2 py-1.5 rounded transition border cursor-pointer
         ${selected
-          ? "bg-[rgba(255,208,0,0.12)] border-[#ffd000]"
-          : "bg-transparent border-[rgba(255,208,0,0.1)] hover:border-[rgba(255,208,0,0.3)]"}`}
+          ? "bg-[rgba(246,244,232,0.12)] border-[#F6F4E8]"
+          : "bg-transparent border-[rgba(246,244,232,0.1)] hover:border-[rgba(246,244,232,0.3)]"}`}
     >
       <div
         className="w-6 h-6 rounded-sm relative flex items-center justify-center"
         style={{
-          border: "1px solid rgba(255,208,0,0.18)",
+          border: "1px solid rgba(246,244,232,0.18)",
           background: "rgba(0,0,0,0.22)",
         }}
       >
@@ -176,8 +176,8 @@ function CustomChip({
             fillRule="evenodd"
             clipRule="evenodd"
             d={COG_24_PATH}
-            fill={selected ? swatchHex : "rgba(255,208,0,0.12)"}
-            stroke={selected ? "none" : "rgba(255,208,0,0.78)"}
+            fill={selected ? swatchHex : "rgba(246,244,232,0.12)"}
+            stroke={selected ? "none" : "rgba(246,244,232,0.78)"}
             strokeWidth={selected ? 0 : 0.4}
             strokeLinejoin="round"
           />
@@ -185,7 +185,7 @@ function CustomChip({
       </div>
       <span
         className={`text-[8px] uppercase tracking-[0.06em] leading-none ${
-          selected ? "text-[#ffd000] font-bold" : "text-[rgba(255,208,0,0.45)]"
+          selected ? "text-[#F6F4E8] font-bold" : "text-[rgba(246,244,232,0.45)]"
         }`}
       >
         {selected ? swatchHex.toUpperCase() : "Custom"}

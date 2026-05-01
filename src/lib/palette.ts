@@ -1,24 +1,44 @@
 import type { ColorId, LogoId, QrColorId } from "./types";
+import { CARD_GEOM_SCALE } from "./print";
+
+const G = CARD_GEOM_SCALE;
 
 // ─── Color ID normalization ──────────────────────────────────────────────────
 
 const VALID_COLOR_IDS = new Set<ColorId>([
-  "dark",
-  "white",
-  "yellow",
+  "claret",
+  "cream",
+  "burgundy",
   "black",
-  "pink",
-  "deep",
-  "red",
+  "white",
+  "gray",
+  "grayLight",
+  "grayLine",
+  "graySoft",
+  "grayDark",
 ]);
 
-/** Keep palette ids as-is and pass through #rrggbb custom colors.
- *  Maps removed swatches and unknown values to a safe default. */
-export function normalizeColorValue(color: unknown, fallback: ColorId = "dark"): string {
+/** Map legacy Folk Devils palette ids + previous La Volta names to La Volta. */
+const LEGACY_COLOR_MAP: Record<string, ColorId> = {
+  dark: "claret",
+  oxblood: "claret",
+  white: "white",
+  yellow: "cream",
+  black: "black",
+  pink: "burgundy",
+  deep: "black",
+  red: "burgundy",
+  green: "grayDark",
+};
+
+/** Keep palette ids as-is and pass through #rrggbb custom colors. */
+export function normalizeColorValue(color: unknown, fallback: ColorId = "claret"): string {
   if (typeof color === "string") {
-    if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color.trim())) return color.trim();
-    if (color === "green") return "deep";
-    if (VALID_COLOR_IDS.has(color as ColorId)) return color;
+    const t = color.trim();
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t)) return t;
+    const mapped = LEGACY_COLOR_MAP[t];
+    if (mapped) return mapped;
+    if (VALID_COLOR_IDS.has(t as ColorId)) return t;
   }
   return fallback;
 }
@@ -26,7 +46,7 @@ export function normalizeColorValue(color: unknown, fallback: ColorId = "dark"):
 /** Back-compat shim used by older call sites. */
 export function normalizeColorId(color: unknown): ColorId {
   const v = normalizeColorValue(color);
-  return (VALID_COLOR_IDS.has(v as ColorId) ? v : "dark") as ColorId;
+  return (VALID_COLOR_IDS.has(v as ColorId) ? v : "claret") as ColorId;
 }
 
 /** Normalize a CSS color to #rrggbb for `<input type="color">` (RGB only). */
@@ -53,10 +73,10 @@ export function toHex6ForColorInput(css: string): string {
 
 const VALID_LOGO_IDS = new Set<LogoId>(["lg_full", "ic_full", "none"]);
 
-/** Map removed logo variants (e.g. white/yellow) to full-color equivalents. */
+/** Map removed / legacy logo variants to the La Volta wordmark. */
 export function normalizeLogoId(logo: unknown): LogoId {
   if (logo === "none") return "none";
-  if (logo === "ic_full" || (typeof logo === "string" && logo.startsWith("ic_"))) return "ic_full";
+  if (logo === "ic_full" || (typeof logo === "string" && logo.startsWith("ic_"))) return "lg_full";
   if (VALID_LOGO_IDS.has(logo as LogoId)) return logo as LogoId;
   return "lg_full";
 }
@@ -64,7 +84,8 @@ export function normalizeLogoId(logo: unknown): LogoId {
 // ─── Logo scale + offset clamps ─────────────────────────────────────────────
 
 const LOGO_SCALE_MIN = 0.5;
-const LOGO_SCALE_MAX = 2;
+/** Non-centered layouts need room for a big crest; centered uses its own hero size. */
+const LOGO_SCALE_MAX = 3.5;
 
 export function clampLogoScale(n: unknown): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : 1;
@@ -74,12 +95,20 @@ export function clampLogoScale(n: unknown): number {
 export const LOGO_SCALE_RANGE = { min: LOGO_SCALE_MIN, max: LOGO_SCALE_MAX, step: 0.05 } as const;
 
 export const DEFAULT_LOGO_SCALE = 1.55;
-export const DEFAULT_LOGO_OFFSET_X = -42;
-export const DEFAULT_LOGO_OFFSET_Y = 2;
+export const DEFAULT_LOGO_OFFSET_X = Math.round(-42 * G);
+export const DEFAULT_LOGO_OFFSET_Y = Math.round(2 * G);
 
 /** Slider limits for position nudgers (SVG viewBox units). */
-export const LOGO_OFFSET_RANGE = { x: 120, y: 100, step: 2 } as const;
-export const TEXT_OFFSET_RANGE = { x: 120, y: 60, step: 2 } as const;
+export const LOGO_OFFSET_RANGE = {
+  x: Math.round(120 * G),
+  y: Math.round(100 * G),
+  step: 2,
+} as const;
+export const TEXT_OFFSET_RANGE = {
+  x: Math.round(120 * G),
+  y: Math.round(60 * G),
+  step: 2,
+} as const;
 
 function clampNumber(n: unknown, limit: number): number {
   const x = typeof n === "number" && Number.isFinite(n) ? n : 0;
@@ -120,67 +149,94 @@ export type ColorDef = {
 
 export const COLORS: ColorDef[] = [
   {
-    id: "dark",
-    name: "Dark Purple",
-    sw: "linear-gradient(135deg,#650049,#29001d)",
-    fill: { type: "gradient", from: "#650049", to: "#29001d", angle: 135 },
-    text: "#ffd000",
-    sub: "rgba(255,208,0,0.60)",
-    hair: "rgba(255,208,0,0.20)",
+    id: "claret",
+    name: "Claret",
+    sw: "#491E29",
+    fill: { type: "solid", color: "#491E29" },
+    text: "#F6F4E8",
+    sub: "rgba(246,244,232,0.78)",
+    hair: "rgba(246,244,232,0.22)",
   },
   {
-    id: "white",
-    name: "White",
-    sw: "#ffffff",
-    fill: { type: "solid", color: "#ffffff" },
-    text: "#440031",
-    sub: "rgba(68,0,49,0.60)",
-    hair: "rgba(68,0,49,0.18)",
+    id: "cream",
+    name: "Cream",
+    sw: "#F6F4E8",
+    fill: { type: "solid", color: "#F6F4E8" },
+    text: "#6B1E2D",
+    sub: "rgba(107,30,45,0.72)",
+    hair: "rgba(107,30,45,0.18)",
   },
   {
-    id: "yellow",
-    name: "Yellow",
-    sw: "#ffd000",
-    fill: { type: "solid", color: "#ffd000" },
-    text: "#440031",
-    sub: "rgba(68,0,49,0.70)",
-    hair: "rgba(68,0,49,0.22)",
+    id: "burgundy",
+    name: "Burgundy",
+    sw: "#6B1E2D",
+    fill: { type: "solid", color: "#6B1E2D" },
+    text: "#F6F4E8",
+    sub: "rgba(246,244,232,0.78)",
+    hair: "rgba(246,244,232,0.22)",
   },
   {
     id: "black",
     name: "Black",
     sw: "#000000",
     fill: { type: "solid", color: "#000000" },
-    text: "#ffffff",
-    sub: "rgba(255,255,255,0.55)",
-    hair: "rgba(255,255,255,0.16)",
+    text: "#F6F4E8",
+    sub: "rgba(246,244,232,0.62)",
+    hair: "rgba(246,244,232,0.18)",
   },
   {
-    id: "pink",
-    name: "Pink",
-    sw: "linear-gradient(135deg,#ff58cd,#440031)",
-    fill: { type: "gradient", from: "#ff58cd", to: "#440031", angle: 135 },
-    text: "#ffffff",
-    sub: "rgba(255,255,255,0.70)",
-    hair: "rgba(255,255,255,0.22)",
+    id: "white",
+    name: "White",
+    sw: "#FFFFFF",
+    fill: { type: "solid", color: "#FFFFFF" },
+    text: "#6B1E2D",
+    sub: "rgba(107,30,45,0.65)",
+    hair: "rgba(107,30,45,0.14)",
   },
   {
-    id: "deep",
-    name: "Deep Dark",
-    sw: "#0a0008",
-    fill: { type: "solid", color: "#0a0008" },
-    text: "#ffffff",
-    sub: "rgba(255,255,255,0.55)",
-    hair: "rgba(255,255,255,0.14)",
+    id: "gray",
+    name: "Gray 666",
+    sw: "#666666",
+    fill: { type: "solid", color: "#666666" },
+    text: "#FFFFFF",
+    sub: "rgba(255,255,255,0.72)",
+    hair: "rgba(255,255,255,0.2)",
   },
   {
-    id: "red",
-    name: "Red",
-    sw: "#ff0011",
-    fill: { type: "solid", color: "#ff0011" },
-    text: "#ffffff",
-    sub: "rgba(255,255,255,0.75)",
-    hair: "rgba(255,255,255,0.22)",
+    id: "grayLight",
+    name: "EFEFEF",
+    sw: "#EFEFEF",
+    fill: { type: "solid", color: "#EFEFEF" },
+    text: "#383838",
+    sub: "rgba(56,56,56,0.65)",
+    hair: "rgba(56,56,56,0.12)",
+  },
+  {
+    id: "grayLine",
+    name: "DEDEDE",
+    sw: "#DEDEDE",
+    fill: { type: "solid", color: "#DEDEDE" },
+    text: "#383838",
+    sub: "rgba(56,56,56,0.62)",
+    hair: "rgba(56,56,56,0.14)",
+  },
+  {
+    id: "graySoft",
+    name: "D0D0D0",
+    sw: "#D0D0D0",
+    fill: { type: "solid", color: "#D0D0D0" },
+    text: "#383838",
+    sub: "rgba(56,56,56,0.6)",
+    hair: "rgba(56,56,56,0.14)",
+  },
+  {
+    id: "grayDark",
+    name: "Charcoal",
+    sw: "#383838",
+    fill: { type: "solid", color: "#383838" },
+    text: "#F6F4E8",
+    sub: "rgba(246,244,232,0.65)",
+    hair: "rgba(246,244,232,0.16)",
   },
 ];
 
@@ -190,15 +246,24 @@ export type LogoDef = {
   id: LogoId;
   label: string;
   src: string | null;
-  /** Which source file to use: wordmark PNG or icon SVG */
   kind: "wordmark" | "icon" | "none";
   /** Intrinsic height units in SVG viewBox (roughly) */
   h: number;
+  /** Width ÷ height for layout math when not a square icon. */
+  aspect?: number;
 };
 
 export const LOGOS: LogoDef[] = [
-  { id: "lg_full", label: "Wordmark", src: "/fd/StaticLogoLrg.png", kind: "wordmark", h: 72 },
-  { id: "ic_full", label: "Icon", src: "/fd/icon.svg", kind: "icon", h: 64 },
+  {
+    id: "lg_full",
+    label: "La Volta",
+    src: "/brand/lavoltaLogo.png",
+    kind: "wordmark",
+    h: Math.round(140 * G),
+    /* lavoltaLogo.png is a square 1024×1024 with the oval crest centered.
+     * Aspect 1.0 makes the reserved box match the image, so the crest fills it. */
+    aspect: 1.0,
+  },
   { id: "none", label: "No logo", src: null, kind: "none", h: 0 },
 ];
 
@@ -206,27 +271,31 @@ export const LOGOS: LogoDef[] = [
 
 export type QrColorDef = { id: QrColorId; name: string; hex: string };
 export const QR_COLORS: QrColorDef[] = [
-  { id: "yellow", name: "Yellow", hex: "#ffd000" },
-  { id: "pink", name: "Pink", hex: "#ff58cd" },
-  { id: "purple", name: "Purple", hex: "#440031" },
-  { id: "red", name: "Red", hex: "#ff0011" },
-  { id: "white", name: "White", hex: "#ffffff" },
+  { id: "claret", name: "Claret", hex: "#491E29" },
+  { id: "burgundy", name: "Burgundy", hex: "#6B1E2D" },
+  { id: "cream", name: "Cream", hex: "#F6F4E8" },
+  { id: "white", name: "White", hex: "#FFFFFF" },
   { id: "black", name: "Black", hex: "#000000" },
+  { id: "gray", name: "Gray", hex: "#666666" },
 ];
 
-/** Shared solid-color palette for text + QR slots.
- *  Card backgrounds use COLORS which includes gradients. */
+/** Shared solid-color palette for text + QR slots. */
 export type SolidPaletteDef = { id: string; name: string; hex: string };
 export const FD_SOLID_PALETTE: SolidPaletteDef[] = [
-  { id: "yellow", name: "Yellow", hex: "#ffd000" },
-  { id: "pink", name: "Pink", hex: "#ff58cd" },
-  { id: "purple", name: "Purple", hex: "#440031" },
-  { id: "red", name: "Red", hex: "#ff0011" },
-  { id: "white", name: "White", hex: "#ffffff" },
-  { id: "black", name: "Black", hex: "#0d0007" },
+  { id: "claret", name: "Claret", hex: "#491E29" },
+  { id: "burgundy", name: "Burgundy", hex: "#6B1E2D" },
+  { id: "cream", name: "Cream", hex: "#F6F4E8" },
+  { id: "black", name: "Black", hex: "#000000" },
+  { id: "white", name: "White", hex: "#FFFFFF" },
+  { id: "gray", name: "Gray 666", hex: "#666666" },
+  { id: "grayDark", name: "Charcoal", hex: "#383838" },
+  { id: "grayLight", name: "EFEFEF", hex: "#EFEFEF" },
+  { id: "grayLine", name: "DEDEDE", hex: "#DEDEDE" },
+  { id: "graySoft", name: "D0D0D0", hex: "#D0D0D0" },
+  { id: "grayF2", name: "F2F2F2", hex: "#F2F2F2" },
 ];
 
-// ─── Flower pattern assets ───────────────────────────────────────────────────
+// ─── Flower pattern assets (optional decorative layer) ───────────────────────
 
 export const FLOWER_SRCS: string[] = [
   "/fd/flower_01.png",
@@ -234,6 +303,5 @@ export const FLOWER_SRCS: string[] = [
   "/fd/flower_03_b.png",
 ];
 
-/** Art-direction size multiplier for each flower, applied on top of the
- *  random per-instance scale. Index matches FLOWER_SRCS. */
+/** Art-direction size multiplier for each flower. Index matches FLOWER_SRCS. */
 export const FLOWER_SCALE: readonly number[] = [2.0, 1.0, 0.9];
