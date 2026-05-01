@@ -34,16 +34,16 @@ import { DEFAULT_FONT_SANS, DEFAULT_FONT_SERIF, sanitizeGoogleFontFamily } from 
 
 // ─── Pattern defaults ────────────────────────────────────────────────────────
 
-/** Decorative flowers — off by default for La Volta cards. */
+/** Background pattern — off until the user turns it on; these values are the first thing they see. */
 export const DEFAULT_PATTERN: PatternConfig = {
   on: false,
-  f1: false,
-  f2: true,
-  f3: true,
-  density: 80,
-  size: 30,
-  rot: 80,
-  opacity: 20,
+  f1: true,
+  f2: false,
+  f3: false,
+  density: 200,
+  size: 29,
+  rot: 0,
+  opacity: 100,
   seed: 4242,
 };
 
@@ -194,11 +194,24 @@ export const DEFAULT_PEOPLE: Person[] = [
   {
     id: 1,
     name: "Suyin Royer",
-    title: "CONSIGNMENTS",
+    title: "FOUNDER",
     phone: "(646) 322-4537",
     email: "Consignments@lavoltanyc.com",
+    orientation: "landscape",
   },
 ];
+
+/** Coerce any persisted person record into a clean shape (orientation defaults to landscape). */
+export function normalizePerson(p: Partial<Person> & { id: number }): Person {
+  return {
+    id: p.id,
+    name: typeof p.name === "string" ? p.name : "",
+    title: typeof p.title === "string" ? p.title : "",
+    phone: typeof p.phone === "string" ? p.phone : "",
+    email: typeof p.email === "string" ? p.email : "",
+    orientation: p.orientation === "portrait" ? "portrait" : "landscape",
+  };
+}
 
 // ─── Migration helpers ───────────────────────────────────────────────────────
 

@@ -29,8 +29,10 @@ export const NAME_TITLE_GAP_DEFAULT_BOLD = Math.round(28 * CARD_GEOM_SCALE);
 export function defaultNameTitleGap(layout: FrontLayout): number {
   switch (layout) {
     case "centered":
+    case "p_centered":
       return NAME_TITLE_GAP_DEFAULT_CENTERED;
     case "bold":
+    case "p_logo_top":
       return NAME_TITLE_GAP_DEFAULT_BOLD;
     default:
       return NAME_TITLE_GAP_DEFAULT_STACK;
@@ -69,6 +71,9 @@ export const FRONT_FONT_NAME_BASE: Record<FrontLayout, number> = {
   stack_logo_right: Math.round(34 * S),
   centered: Math.round(28 * S),
   bold: Math.round(56 * S),
+  p_centered: Math.round(30 * S),
+  p_stack: Math.round(34 * S),
+  p_logo_top: Math.round(48 * S),
 };
 
 export const FRONT_FONT_TITLE_BASE: Record<FrontLayout, number> = {
@@ -77,6 +82,9 @@ export const FRONT_FONT_TITLE_BASE: Record<FrontLayout, number> = {
   stack_logo_right: Math.round(15 * S),
   centered: Math.round(14 * S),
   bold: Math.round(14 * S),
+  p_centered: Math.round(14 * S),
+  p_stack: Math.round(15 * S),
+  p_logo_top: Math.round(14 * S),
 };
 
 export const FRONT_FONT_CONTACT_LABEL_BASE: Record<FrontLayout, number> = {
@@ -85,6 +93,9 @@ export const FRONT_FONT_CONTACT_LABEL_BASE: Record<FrontLayout, number> = {
   stack_logo_right: Math.round(14 * S),
   centered: Math.round(14 * S),
   bold: Math.round(14 * S),
+  p_centered: Math.round(14 * S),
+  p_stack: Math.round(14 * S),
+  p_logo_top: Math.round(14 * S),
 };
 
 export const FRONT_FONT_CONTACT_VALUE_BASE: Record<FrontLayout, number> = {
@@ -93,6 +104,9 @@ export const FRONT_FONT_CONTACT_VALUE_BASE: Record<FrontLayout, number> = {
   stack_logo_right: Math.round(16 * S),
   centered: Math.round(15 * S),
   bold: Math.round(15 * S),
+  p_centered: Math.round(15 * S),
+  p_stack: Math.round(16 * S),
+  p_logo_top: Math.round(15 * S),
 };
 
 const NAME_PX_MAX = Math.round(200 * S);

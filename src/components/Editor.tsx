@@ -16,6 +16,7 @@ import { SectionLabel } from "./controls/Primitives";
 export default function Editor() {
   const {
     people, front, back, person,
+    orientation, cardDims,
     selectedId, selectedPersonId,
     hydrated,
     exporting, exportError, setExportError,
@@ -24,6 +25,7 @@ export default function Editor() {
     setSelectedId,
     updateFront, patchSelectedFront,
     updateBack, patchSelectedBack,
+    setOrientation,
     addPerson, updatePerson, deletePerson,
     handleExport, clearSavedData,
     exportSelectedPersonSettings,
@@ -181,8 +183,12 @@ export default function Editor() {
             <SectionLabel>Print Spec</SectionLabel>
             <div className="text-[10px] text-[rgba(246,244,232,0.55)] leading-relaxed space-y-1">
               <div>
+                Orientation&nbsp;·&nbsp;
+                <span className="text-[#F6F4E8]/90 capitalize">{orientation}</span>
+              </div>
+              <div>
                 Finished&nbsp;·&nbsp;
-                <span className="text-[#F6F4E8]/90">{EXPORT_SPEC.finishedIn[0]}″ × {EXPORT_SPEC.finishedIn[1]}″</span>
+                <span className="text-[#F6F4E8]/90">{cardDims.finishedWIn}″ × {cardDims.finishedHIn}″</span>
               </div>
               <div>
                 Bleed&nbsp;·&nbsp;
@@ -190,7 +196,7 @@ export default function Editor() {
               </div>
               <div>
                 Export&nbsp;·&nbsp;
-                <span className="text-[#F6F4E8]/90">{EXPORT_SPEC.pxAt300[0]}×{EXPORT_SPEC.pxAt300[1]} @ {EXPORT_SPEC.dpi} DPI</span>
+                <span className="text-[#F6F4E8]/90">{cardDims.pxW}×{cardDims.pxH} @ {EXPORT_SPEC.dpi} DPI</span>
               </div>
               <div className="text-[rgba(246,244,232,0.35)]">MOO-compatible full-bleed PDF</div>
             </div>
@@ -216,14 +222,22 @@ export default function Editor() {
             lg+: flex-1 so the card fills the space between the two rails */}
         <section className="shrink-0 lg:flex-1 flex flex-col items-center justify-center gap-3 p-3 sm:p-4 lg:p-6 bg-[#1f1c1a] min-w-0 lg:overflow-hidden">
           <div
-            className={`flip-card w-full shadow-[0_20px_60px_rgba(0,0,0,0.65),0_4px_18px_rgba(0,0,0,0.45)] rounded-xl overflow-hidden ${
+            className={`flip-card shadow-[0_20px_60px_rgba(0,0,0,0.65),0_4px_18px_rgba(0,0,0,0.45)] rounded-xl overflow-hidden ${
               flipPhase === "out" ? "flip-out" : "flip-in"
             }`}
-            style={{
-              width: "min(92vw, 820px)",
-              maxHeight: "min(82vh, 760px)",
-              aspectRatio: `${EXPORT_SPEC.vb[0]} / ${EXPORT_SPEC.vb[1]}`,
-            }}
+            style={
+              orientation === "portrait"
+                ? {
+                    height: "min(82vh, 760px)",
+                    maxWidth: "92vw",
+                    aspectRatio: `${cardDims.vbW} / ${cardDims.vbH}`,
+                  }
+                : {
+                    width: "min(92vw, 820px)",
+                    maxHeight: "min(82vh, 760px)",
+                    aspectRatio: `${cardDims.vbW} / ${cardDims.vbH}`,
+                  }
+            }
           >
             <CardFontProvider serif={front.fontFamilySerif} sans={front.fontFamilySans}>
               <div style={{ display: face === "front" ? "block" : "none" }} className="w-full h-full">
@@ -235,26 +249,53 @@ export default function Editor() {
             </CardFontProvider>
           </div>
 
-          {/* Face toggle */}
-          <div className="flex border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden">
-            {(["front", "back"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => switchTab(f)}
-                className={`px-7 py-2 text-[10px] uppercase tracking-[0.12em] min-h-[36px] transition
-                  ${tab === f
-                    ? "bg-[#6B1E2D] text-[#F6F4E8] font-bold"
-                    : "bg-transparent text-[rgba(246,244,232,0.45)] hover:text-[rgba(246,244,232,0.85)]"}`}
-              >
-                {f}
-              </button>
-            ))}
+          {/* Face + orientation toggles */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <div
+              role="group"
+              aria-label="Card face"
+              className="flex border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
+            >
+              {(["front", "back"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => switchTab(f)}
+                  className={`px-7 py-2 text-[10px] uppercase tracking-[0.12em] min-h-[36px] transition
+                    ${tab === f
+                      ? "bg-[#6B1E2D] text-[#F6F4E8] font-bold"
+                      : "bg-transparent text-[rgba(246,244,232,0.45)] hover:text-[rgba(246,244,232,0.85)]"}`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            <div
+              role="group"
+              aria-label="Card orientation"
+              className="flex border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
+            >
+              {(["landscape", "portrait"] as const).map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => setOrientation(o)}
+                  title={o === "landscape" ? "Landscape · 8.5″ × 5.5″" : "Portrait · 5.5″ × 8.5″"}
+                  className={`px-7 py-2 text-[10px] uppercase tracking-[0.12em] min-h-[36px] transition
+                    ${orientation === o
+                      ? "bg-[#6B1E2D] text-[#F6F4E8] font-bold"
+                      : "bg-transparent text-[rgba(246,244,232,0.45)] hover:text-[rgba(246,244,232,0.85)]"}`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="text-[9px] uppercase tracking-[0.14em] text-[rgba(246,244,232,0.22)]">
-            {EXPORT_SPEC.finishedIn[0]}″ × {EXPORT_SPEC.finishedIn[1]}″&nbsp;·&nbsp;
+            {cardDims.finishedWIn}″ × {cardDims.finishedHIn}″&nbsp;·&nbsp;
             {EXPORT_SPEC.bleedIn}″ bleed&nbsp;·&nbsp;
-            {EXPORT_SPEC.pxAt300[0]}×{EXPORT_SPEC.pxAt300[1]} @ {EXPORT_SPEC.dpi} DPI
+            {cardDims.pxW}×{cardDims.pxH} @ {EXPORT_SPEC.dpi} DPI
           </div>
         </section>
 

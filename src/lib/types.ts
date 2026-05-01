@@ -1,9 +1,13 @@
+export type Orientation = "landscape" | "portrait";
+
 export type Person = {
   id: number;
   name: string;
   title: string;
   phone: string;
   email: string;
+  /** Card orientation. Defaults to "landscape" when missing (legacy data). */
+  orientation?: Orientation;
 };
 
 /** Background palette ids. Actual value on state is `string` so it can
@@ -28,7 +32,8 @@ export type ColorValue = string;
 
 export type LogoId = "lg_full" | "ic_full" | "none";
 
-export type FrontLayout =
+/** Landscape front layouts (existing). */
+export type FrontLayoutLandscape =
   | "stack"
   /** Stack column right-aligned, logo vertically centered on the LEFT. */
   | "stack_logo_left"
@@ -36,7 +41,22 @@ export type FrontLayout =
   | "stack_logo_right"
   | "centered"
   | "bold";
-export type BackLayout = "one_qr" | "two_qr" | "logo_qr" | "type" | "minimal";
+
+/** Portrait front layouts (5.5" × 8.5"). */
+export type FrontLayoutPortrait =
+  | "p_centered"
+  | "p_stack"
+  | "p_logo_top";
+
+export type FrontLayout = FrontLayoutLandscape | FrontLayoutPortrait;
+
+/** Landscape back layouts (existing). */
+export type BackLayoutLandscape = "one_qr" | "two_qr" | "logo_qr" | "type" | "minimal";
+
+/** Portrait back layouts. */
+export type BackLayoutPortrait = "p_one_qr" | "p_two_qr" | "p_logo_qr";
+
+export type BackLayout = BackLayoutLandscape | BackLayoutPortrait;
 
 /** QR color palette ids. Actual field is `string`, can also be a hex. */
 export type QrColorId = "claret" | "burgundy" | "cream" | "white" | "black" | "gray";

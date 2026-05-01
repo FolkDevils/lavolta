@@ -2,21 +2,21 @@
 
 import { forwardRef } from "react";
 import {
+  backLayoutOrientation,
   CARD_GEOM_SCALE,
   clampFontBackDisplay,
   clampFontMinimalLink,
   clampFontQrCaption,
   DEFAULT_QR_LINKS,
+  getCardDims,
   LOGOS,
-  VB_H,
-  VB_W,
 } from "@/lib/constants";
 import { resolveCardPalette, resolveSolidHex } from "@/lib/color";
 import { buildLogoImageFilter } from "@/lib/logoFilter";
 import type { BackState } from "@/lib/types";
 import { PatternLayer } from "../PatternLayer";
 import { QrModule } from "../QrModule";
-import { CardShell, clampBox, CONTENT_H, CONTENT_X, CONTENT_Y, Txt } from "./shared";
+import { CardShell, clampBox, contentRectFor, Txt } from "./shared";
 
 type BackProps = {
   bs: BackState;
@@ -24,6 +24,10 @@ type BackProps = {
 };
 
 export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({ bs, guides }, ref) {
+  const orientation = backLayoutOrientation(bs.layout);
+  const { vbW, vbH } = getCardDims(orientation);
+  const { contentX, contentY, contentW, contentH } = contentRectFor(vbW, vbH);
+
   const c = resolveCardPalette(bs.color);
   const textFill = bs.textFill == null ? c.text : resolveSolidHex(bs.textFill, c.text);
   const subFill = bs.subTextFill == null ? c.sub : resolveSolidHex(bs.subTextFill, c.sub);
@@ -39,11 +43,10 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
   const fzDisp = clampFontBackDisplay(bs.fontBackDisplay);
   const fzMin = clampFontMinimalLink(bs.fontMinimalLink);
 
-  /* QR sizes scaled to landscape: cap by the SHORTER side so they don't go
-   * absurdly wide. Caption gap pulled in tighter to feel intentional. */
-  const qrLarge = Math.min(Math.floor(VB_H * 0.62), Math.floor(VB_W * 0.42));
-  const qrMed = Math.min(Math.floor(VB_H * 0.48), Math.floor(VB_W * 0.32));
-  const qrSmall = Math.min(Math.floor(VB_H * 0.30), Math.floor(VB_W * 0.20));
+  /* QR sizes capped by the SHORTER side so they never go absurdly wide. */
+  const qrLarge = Math.min(Math.floor(vbH * 0.62), Math.floor(vbW * 0.62));
+  const qrMed = Math.min(Math.floor(vbH * 0.48), Math.floor(vbW * 0.48));
+  const qrSmall = Math.min(Math.floor(vbH * 0.30), Math.floor(vbW * 0.30));
   const gapLg = Math.round(60 * CARD_GEOM_SCALE);
   const gapMd = Math.round(40 * CARD_GEOM_SCALE);
   const gapSm = Math.round(28 * CARD_GEOM_SCALE);
@@ -98,8 +101,8 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
     const logoFilter = buildLogoImageFilter(bs.logoAdjust);
     const baseOx = align === "start" ? x : align === "middle" ? x - w / 2 : x - w;
     const baseOy = y + h / 2 - hi / 2;
-    const ox = clampBox(baseOx + (bs.logoOffsetX ?? 0), w, 0, VB_W);
-    const yDraw = clampBox(baseOy + (bs.logoOffsetY ?? 0), hi, 0, VB_H);
+    const ox = clampBox(baseOx + (bs.logoOffsetX ?? 0), w, 0, vbW);
+    const yDraw = clampBox(baseOy + (bs.logoOffsetY ?? 0), hi, 0, vbH);
     return (
       <image
         href={lg.src}
@@ -113,19 +116,19 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
     );
   };
 
-  type Variant = "one_qr" | "two_qr" | "logo_qr" | "type" | "minimal";
-  const layouts: Record<Variant, React.ReactNode> = {
+  const layouts: Record<typeof bs.layout, React.ReactNode> = {
+    /* ── Landscape ──────────────────────────────────────────────────────── */
     one_qr: (() => {
       const link = selected[0] ?? allLinks[0];
-      const qrSize = qrLarge;
-      const x = (VB_W - qrSize) / 2;
-      const topY = (VB_H - qrSize) / 2 - Math.round(VB_H * 0.012);
+      const qrSize = Math.min(Math.floor(vbH * 0.62), Math.floor(vbW * 0.42));
+      const x = (vbW - qrSize) / 2;
+      const topY = (vbH - qrSize) / 2 - Math.round(vbH * 0.012);
       return (
         <g key={link.id}>
           <Qr link={link} x={x} y={topY} size={qrSize} />
           <Txt
             variant="sans"
-            x={VB_W / 2}
+            x={vbW / 2}
             y={topY + qrSize + capGap}
             fontSize={fzCap}
             fontWeight={700}
@@ -140,11 +143,11 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
     })(),
 
     two_qr: (() => {
-      const qrSize = qrMed;
+      const qrSize = Math.min(Math.floor(vbH * 0.48), Math.floor(vbW * 0.32));
       const gap = gapLg;
       const totalW = qrSize * effectiveLinks.length + gap * (effectiveLinks.length - 1);
-      const startX = (VB_W - totalW) / 2;
-      const topY = (VB_H - qrSize) / 2 - Math.round(VB_H * 0.012);
+      const startX = (vbW - totalW) / 2;
+      const topY = (vbH - qrSize) / 2 - Math.round(vbH * 0.012);
       return (
         <>
           {effectiveLinks.map((link, i) => (
@@ -169,17 +172,17 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
     })(),
 
     logo_qr: (() => {
-      const logoH = Math.round(CONTENT_H * 0.34);
-      const qrSize = Math.min(Math.floor(VB_H * 0.42), Math.floor(VB_W * 0.22));
+      const logoH = Math.round(contentH * 0.34);
+      const qrSize = Math.min(Math.floor(vbH * 0.42), Math.floor(vbW * 0.22));
       const gap = gapMd;
       const totalW = qrSize * effectiveLinks.length + gap * (effectiveLinks.length - 1);
-      const startX = (VB_W - totalW) / 2;
-      const qrBandY = CONTENT_Y + Math.round(CONTENT_H * 0.42);
+      const startX = (vbW - totalW) / 2;
+      const qrBandY = contentY + Math.round(contentH * 0.42);
       return (
         <>
           <Logo
-            x={VB_W / 2}
-            y={CONTENT_Y + Math.round(CONTENT_H * 0.02)}
+            x={vbW / 2}
+            y={contentY + Math.round(contentH * 0.02)}
             h={logoH}
             align="middle"
           />
@@ -208,13 +211,13 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
       const qrSize = qrSmall;
       const gap = gapSm;
       const totalW = qrSize * effectiveLinks.length + gap * (effectiveLinks.length - 1);
-      const startX = (VB_W - totalW) / 2;
-      const headlineY = CONTENT_Y + Math.round(CONTENT_H * 0.18);
-      const qrY = CONTENT_Y + Math.round(CONTENT_H * 0.42);
+      const startX = (vbW - totalW) / 2;
+      const headlineY = contentY + Math.round(contentH * 0.18);
+      const qrY = contentY + Math.round(contentH * 0.42);
       return (
         <>
           <Txt
-            x={VB_W / 2}
+            x={vbW / 2}
             y={headlineY}
             fontSize={fzDisp}
             fontWeight={900}
@@ -250,15 +253,15 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
       const rowGap = Math.round(20 * CARD_GEOM_SCALE);
       const rowStep = qrSize + rowGap;
       const n = effectiveLinks.length;
-      const startY = CONTENT_Y + CONTENT_H - n * qrSize - Math.max(0, n - 1) * rowGap;
+      const startY = contentY + contentH - n * qrSize - Math.max(0, n - 1) * rowGap;
       return (
         <>
           {effectiveLinks.map((link, i) => (
             <g key={link.id}>
-              <Qr link={link} x={CONTENT_X} y={startY + i * rowStep} size={qrSize} />
+              <Qr link={link} x={contentX} y={startY + i * rowStep} size={qrSize} />
               <Txt
                 variant="sans"
-                x={CONTENT_X + qrSize + Math.round(18 * CARD_GEOM_SCALE)}
+                x={contentX + qrSize + Math.round(18 * CARD_GEOM_SCALE)}
                 y={startY + i * rowStep + qrSize / 2 + 4}
                 fontSize={fzMin}
                 fontWeight={600}
@@ -271,20 +274,114 @@ export const CardBack = forwardRef<SVGSVGElement, BackProps>(function CardBack({
         </>
       );
     })(),
+
+    /* ── Portrait ───────────────────────────────────────────────────────── */
+    p_one_qr: (() => {
+      /* Big QR vertically centered with a caption underneath. */
+      const link = selected[0] ?? allLinks[0];
+      const qrSize = qrLarge;
+      const x = (vbW - qrSize) / 2;
+      const topY = contentY + Math.round(contentH * 0.16) + 100;
+      return (
+        <g key={link.id}>
+          <Qr link={link} x={x} y={topY} size={qrSize} />
+          <Txt
+            variant="sans"
+            x={vbW / 2}
+            y={topY + qrSize + Math.round(capGap * 1.4)}
+            fontSize={fzCap}
+            fontWeight={700}
+            fill={subFill}
+            letterSpacing="0.14em"
+            textAnchor="middle"
+          >
+            {link.label.toUpperCase()}
+          </Txt>
+        </g>
+      );
+    })(),
+
+    p_two_qr: (() => {
+      /* Two QRs stacked vertically, each with a caption. */
+      const qrSize = qrMed;
+      const rowGap = Math.round(gapLg * 0.7);
+      const totalH = qrSize * effectiveLinks.length + rowGap * (effectiveLinks.length - 1);
+      const startY = contentY + (contentH - totalH) / 2;
+      const x = (vbW - qrSize) / 2;
+      return (
+        <>
+          {effectiveLinks.map((link, i) => (
+            <g key={link.id}>
+              <Qr link={link} x={x} y={startY + i * (qrSize + rowGap)} size={qrSize} />
+              <Txt
+                variant="sans"
+                x={vbW / 2}
+                y={startY + i * (qrSize + rowGap) + qrSize + capGap}
+                fontSize={fzCap}
+                fontWeight={700}
+                fill={subFill}
+                letterSpacing="0.14em"
+                textAnchor="middle"
+              >
+                {link.label.toUpperCase()}
+              </Txt>
+            </g>
+          ))}
+        </>
+      );
+    })(),
+
+    p_logo_qr: (() => {
+      /* Logo top-third, QRs centered below. */
+      const logoH = Math.round(contentW * 0.42);
+      const qrSize = Math.min(Math.floor(vbH * 0.36), Math.floor(vbW * 0.55));
+      const gap = gapMd;
+      const totalW = qrSize * effectiveLinks.length + gap * (effectiveLinks.length - 1);
+      const startX = (vbW - totalW) / 2;
+      const qrBandY = contentY + Math.round(contentH * 0.46);
+      return (
+        <>
+          <Logo
+            x={vbW / 2}
+            y={contentY + Math.round(contentH * 0.06)}
+            h={logoH}
+            align="middle"
+          />
+          {effectiveLinks.map((link, i) => (
+            <g key={link.id}>
+              <Qr link={link} x={startX + i * (qrSize + gap)} y={qrBandY} size={qrSize} />
+              <Txt
+                variant="sans"
+                x={startX + i * (qrSize + gap) + qrSize / 2}
+                y={qrBandY + qrSize + Math.round(24 * CARD_GEOM_SCALE)}
+                fontSize={fzCap}
+                fontWeight={700}
+                fill={subFill}
+                letterSpacing="0.12em"
+                textAnchor="middle"
+              >
+                {link.label.toUpperCase()}
+              </Txt>
+            </g>
+          ))}
+        </>
+      );
+    })(),
   };
 
   return (
     <svg
       ref={ref}
       xmlns="http://www.w3.org/2000/svg"
-      viewBox={`0 0 ${VB_W} ${VB_H}`}
+      viewBox={`0 0 ${vbW} ${vbH}`}
       width="100%"
       height="100%"
       style={{ display: "block" }}
       data-face="back"
+      data-orientation={orientation}
     >
-      <CardShell fillDef={c.fill} guides={guides} bgImage={bs.bgImage}>
-        <PatternLayer cfg={bs.pat} w={VB_W} h={VB_H} />
+      <CardShell fillDef={c.fill} guides={guides} bgImage={bs.bgImage} vbW={vbW} vbH={vbH}>
+        <PatternLayer cfg={bs.pat} w={vbW} h={vbH} ink={c.hair} />
         {layouts[bs.layout]}
       </CardShell>
     </svg>

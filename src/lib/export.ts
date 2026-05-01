@@ -1,10 +1,29 @@
 "use client";
 
 import { buildGoogleFontsStylesheetHref } from "./cardFonts";
-import { BLEED_IN, DPI, FINISHED_H_IN, FINISHED_W_IN, PX_H, PX_W, VB_H, VB_W } from "./constants";
+import {
+  BLEED_IN,
+  DPI,
+  FINISHED_H_IN,
+  FINISHED_W_IN,
+  getCardDims,
+  PX_H,
+  PX_W,
+  VB_H,
+  VB_W,
+} from "./constants";
+import type { CardDims } from "./print";
+import type { Orientation } from "./types";
 
 /** Card text faces — passed into standalone SVG so PNG/PDF raster matches the editor. */
 export type CardExportFonts = { serif: string; sans: string };
+
+/** Resolve dims from either an explicit `CardDims` or just an `Orientation`. */
+function dimsOrLandscape(dims?: CardDims | Orientation): CardDims {
+  if (!dims) return getCardDims("landscape");
+  if (typeof dims === "string") return getCardDims(dims);
+  return dims;
+}
 
 /* ──────────────────────────────────────────────────────────
  * Export helpers
@@ -68,7 +87,7 @@ function fetchAsDataUrl(href: string): Promise<string | null> {
 }
 
 /** Inline all referenced <image> elements as data URIs. Dedupes hrefs so
- *  a pattern with 30 copies of flower_01.png only fetches that file once. */
+ *  repeated assets (e.g. logos) only fetch once per export. */
 async function inlineImages(svg: SVGSVGElement): Promise<SVGSVGElement> {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const imgs = Array.from(clone.querySelectorAll("image"));
@@ -104,23 +123,25 @@ type BuildSvgOpts = {
   skipFont?: boolean;
   /** Load card heading/body fonts inside the SVG (SVG + raster export). */
   googleFonts?: CardExportFonts;
+  /** Card geometry. Falls back to landscape if omitted (legacy callers). */
+  dims?: CardDims | Orientation;
 };
 
 /** Build a standalone, self-contained SVG string with images inlined. */
 async function buildStandaloneSvg(svg: SVGSVGElement, opts: BuildSvgOpts = {}): Promise<string> {
   const clone = await inlineImages(svg);
+  const d = dimsOrLandscape(opts.dims);
 
   clone.querySelectorAll("[data-guide]").forEach((n) => n.remove());
 
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
   if (opts.forRaster) {
-    /* Many browsers only decode raster-from-SVG when root size is numeric px. */
-    clone.setAttribute("width", String(PX_W));
-    clone.setAttribute("height", String(PX_H));
+    clone.setAttribute("width", String(d.pxW));
+    clone.setAttribute("height", String(d.pxH));
   } else {
-    clone.setAttribute("width", `${FINISHED_W_IN + 2 * BLEED_IN}in`);
-    clone.setAttribute("height", `${FINISHED_H_IN + 2 * BLEED_IN}in`);
+    clone.setAttribute("width", `${d.finishedWIn + 2 * BLEED_IN}in`);
+    clone.setAttribute("height", `${d.finishedHIn + 2 * BLEED_IN}in`);
   }
 
   if (!opts.skipFont && opts.googleFonts) {
@@ -170,9 +191,10 @@ export async function exportSvg(
   svg: SVGSVGElement,
   filename: string,
   googleFonts?: CardExportFonts,
+  dims?: CardDims | Orientation,
 ) {
   console.log("[export] exportSvg start", filename);
-  const xml = await buildStandaloneSvg(svg, { googleFonts });
+  const xml = await buildStandaloneSvg(svg, { googleFonts, dims });
   const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
   download(blob, filename);
   console.log("[export] exportSvg done");
@@ -206,15 +228,22 @@ function loadSvgAsImage(xml: string): Promise<HTMLImageElement> {
 /** Rasterize an SVG element to a PNG blob at the given physical DPI. */
 export async function rasterizeToPng(
   svg: SVGSVGElement,
-  opts: { widthPx?: number; heightPx?: number; googleFonts?: CardExportFonts } = {},
+  opts: {
+    widthPx?: number;
+    heightPx?: number;
+    googleFonts?: CardExportFonts;
+    dims?: CardDims | Orientation;
+  } = {},
 ): Promise<Blob> {
-  const widthPx = opts.widthPx ?? PX_W;
-  const heightPx = opts.heightPx ?? PX_H;
+  const d = dimsOrLandscape(opts.dims);
+  const widthPx = opts.widthPx ?? d.pxW;
+  const heightPx = opts.heightPx ?? d.pxH;
 
   console.log("[export] rasterizeToPng", widthPx, "x", heightPx);
   const xml = await buildStandaloneSvg(svg, {
     forRaster: true,
     googleFonts: opts.googleFonts,
+    dims: d,
   });
   const img = await loadSvgAsImage(xml);
   await (img.decode?.() ?? Promise.resolve()).catch(() => {});
@@ -244,9 +273,10 @@ export async function exportPng(
   svg: SVGSVGElement,
   filename: string,
   googleFonts?: CardExportFonts,
+  dims?: CardDims | Orientation,
 ) {
   console.log("[export] exportPng start", filename);
-  const blob = await rasterizeToPng(svg, { googleFonts });
+  const blob = await rasterizeToPng(svg, { googleFonts, dims });
   download(blob, filename);
   console.log("[export] exportPng done");
 }
@@ -260,8 +290,10 @@ export async function exportPdf(
   backSvg: SVGSVGElement,
   filename: string,
   googleFonts?: CardExportFonts,
+  dims?: CardDims | Orientation,
 ) {
   console.log("[export] exportPdf start", filename);
+  const d = dimsOrLandscape(dims);
   const mod = (await import("jspdf")) as { jsPDF?: unknown; default?: unknown };
   const JsPDF = (mod.jsPDF ?? mod.default) as new (o?: object) => {
     addImage: (...a: unknown[]) => void;
@@ -273,8 +305,8 @@ export async function exportPdf(
   if (typeof JsPDF !== "function") throw new Error("jsPDF module did not export a constructor");
 
   const [frontPng, backPng] = await Promise.all([
-    rasterizeToPng(frontSvg, { googleFonts }),
-    rasterizeToPng(backSvg, { googleFonts }),
+    rasterizeToPng(frontSvg, { googleFonts, dims: d }),
+    rasterizeToPng(backSvg, { googleFonts, dims: d }),
   ]);
 
   const [frontDataUrl, backDataUrl] = await Promise.all([
@@ -282,8 +314,8 @@ export async function exportPdf(
     blobToDataUrl(backPng),
   ]);
 
-  const pageW = FINISHED_W_IN + 2 * BLEED_IN;
-  const pageH = FINISHED_H_IN + 2 * BLEED_IN;
+  const pageW = d.finishedWIn + 2 * BLEED_IN;
+  const pageH = d.finishedHIn + 2 * BLEED_IN;
   const pageOrientation = pageH >= pageW ? "portrait" : "landscape";
 
   const pdf = new JsPDF({
@@ -299,7 +331,7 @@ export async function exportPdf(
 
   pdf.setProperties({
     title: filename.replace(/\.pdf$/i, ""),
-    subject: `Business Card — ${FINISHED_W_IN}" × ${FINISHED_H_IN}" finished, ${BLEED_IN}" bleed`,
+    subject: `Business Card — ${d.finishedWIn}" × ${d.finishedHIn}" finished, ${BLEED_IN}" bleed`,
     creator: "La Volta Business Card Builder",
     author: "La Volta",
   });
@@ -320,7 +352,9 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-/** Expose key numbers for the UI so the "what will I get" copy stays in sync */
+/** Expose landscape numbers for the UI so the "what will I get" copy
+ *  stays in sync with the print constants. Use `getCardDims(orientation)`
+ *  for the current selection. */
 export const EXPORT_SPEC = {
   finishedIn: [FINISHED_W_IN, FINISHED_H_IN] as const,
   bleedIn: BLEED_IN,

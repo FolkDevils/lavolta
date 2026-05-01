@@ -1,4 +1,4 @@
-import { FLOWER_SCALE, FLOWER_SRCS } from "@/lib/constants";
+import { FLOWER_SCALE } from "@/lib/constants";
 import { mkRng } from "@/lib/rng";
 import type { PatternConfig } from "@/lib/types";
 
@@ -6,44 +6,78 @@ type Props = {
   cfg: PatternConfig;
   w: number;
   h: number;
+  /** Subtle mark color — pass card palette `hair` for tone-on-tone. */
+  ink?: string;
 };
 
+type MotifItem = { motif: 0 | 1 | 2; x: number; y: number; sz: number; rot: number };
+
+function PatternShape({ item, ink }: { item: MotifItem; ink: string }) {
+  const { motif, x, y, sz, rot } = item;
+  const sw = Math.max(0.75, sz * 0.065);
+  const g = `translate(${x} ${y}) rotate(${rot.toFixed(2)})`;
+
+  if (motif === 0) {
+    return (
+      <g transform={g}>
+        <circle r={sz * 0.42} fill="none" stroke={ink} strokeWidth={sw} opacity={0.88} />
+        <circle r={sz * 0.19} fill="none" stroke={ink} strokeWidth={sw * 0.85} opacity={0.52} />
+      </g>
+    );
+  }
+  if (motif === 1) {
+    const s = sz * 0.52;
+    return (
+      <g transform={g}>
+        <rect
+          x={-s / 2}
+          y={-s / 2}
+          width={s}
+          height={s}
+          rx={sz * 0.045}
+          ry={sz * 0.045}
+          fill="none"
+          stroke={ink}
+          strokeWidth={sw}
+          transform="rotate(45)"
+        />
+      </g>
+    );
+  }
+  return (
+    <g transform={g}>
+      <ellipse rx={sz * 0.44} ry={sz * 0.24} fill="none" stroke={ink} strokeWidth={sw} opacity={0.88} />
+      <circle r={sz * 0.085} fill={ink} fillOpacity={0.35} />
+    </g>
+  );
+}
+
+/** Evenly spaced subset of `items` (length n) — avoids random clumps when density < grid cells. */
+function evenSample<T>(items: T[], n: number): T[] {
+  const L = items.length;
+  if (L === 0 || n <= 0) return [];
+  if (n >= L) return [...items];
+  const out: T[] = [];
+  for (let k = 0; k < n; k++) {
+    const idx = Math.min(L - 1, Math.floor(((k + 0.5) * L) / n));
+    out.push(items[idx]!);
+  }
+  return out;
+}
+
 /**
- * Falling-flower pattern rendered as SVG <image> elements.
- *
- * The previous implementation iterated a cols×rows grid row-major and
- * broke the moment it hit `cfg.density`, which deterministically left
- * the bottom-right cells empty. It also never let flowers sit across
- * the card edge, so corners felt "stamped" rather than like a piece
- * of a larger print pattern.
- *
- * New algorithm:
- *   1. Interior pass — place one seeded candidate in every cell of the
- *      cols×rows grid, Fisher–Yates shuffle with the same seeded RNG,
- *      then truncate to `density`. Uniform distribution, no directional
- *      bias → corners get the same odds as the middle.
- *   2. Spill ring — one extra ring of cells past every edge on all four
- *      sides + corners. Always rendered; the parent `<clipPath>` trims
- *      whatever lands outside the bleed, so the pattern reads as a
- *      continuous mat instead of a contained block.
- *   3. Jitter bumped to ±45% of cell so the underlying grid is invisible.
- *   4. Per-flower size multipliers live in `FLOWER_SCALE` so
- *      art-direction is centralized and easy to tweak.
- *
- * Everything is deterministic from `cfg.seed` — identical configs always
- * render pixel-for-pixel the same pattern, which matters for export
- * repeatability.
+ * Seeded scatter of simple vector motifs (La Volta–adjacent: rings, gem diamond,
+ * oval “seal”) — interior grid + spill ring; tight jitter + even subsampling.
+ * Rotation slider sets one shared angle (degrees) for every motif.
  */
-export function PatternLayer({ cfg, w, h }: Props) {
+export function PatternLayer({ cfg, w, h, ink }: Props) {
   if (!cfg.on) return null;
 
-  const enabled: (string | false)[] = [
-    cfg.f1 && FLOWER_SRCS[0],
-    cfg.f2 && FLOWER_SRCS[1],
-    cfg.f3 && FLOWER_SRCS[2],
-  ];
-  const srcs = enabled.filter(Boolean) as string[];
-  if (!srcs.length) return null;
+  const mark = ink ?? "rgba(107,30,45,0.16)";
+
+  const enabled: (0 | 1 | 2 | false)[] = [cfg.f1 && 0, cfg.f2 && 1, cfg.f3 && 2];
+  const motifs = enabled.filter((v): v is 0 | 1 | 2 => v !== false);
+  if (!motifs.length) return null;
 
   const rng = mkRng(cfg.seed);
   const aspect = w / h;
@@ -52,47 +86,35 @@ export function PatternLayer({ cfg, w, h }: Props) {
   const cellW = w / cols;
   const cellH = h / rows;
 
-  type Item = { src: string; x: number; y: number; sz: number; rot: number };
-
-  /** Deterministic placement inside a cell centered at (cx, cy).
-   *  Always advances the RNG by the same number of draws so output is
-   *  stable regardless of which cells caller visits. */
-  const place = (cx: number, cy: number): Item => {
-    const jx = (rng() - 0.5) * cellW * 0.9;
-    const jy = (rng() - 0.5) * cellH * 0.9;
-    const src = srcs[Math.floor(rng() * srcs.length)];
-    const scaleRand = 0.75 + rng() * 0.5;
-    const rot = (rng() - 0.5) * cfg.rot;
-    const flowerScale = FLOWER_SCALE[FLOWER_SRCS.indexOf(src)] ?? 1;
+  const place = (cx: number, cy: number): MotifItem => {
+    const jitter = 0.28;
+    const jx = (rng() - 0.5) * cellW * jitter;
+    const jy = (rng() - 0.5) * cellH * jitter;
+    const motif = motifs[Math.floor(rng() * motifs.length)]!;
+    const scaleRand = 0.88 + rng() * 0.2;
+    const rot = cfg.rot;
+    const motifScale = FLOWER_SCALE[motif] ?? 1;
     return {
-      src,
+      motif,
       x: cx + jx,
       y: cy + jy,
-      sz: cfg.size * scaleRand * flowerScale,
+      sz: cfg.size * scaleRand * motifScale,
       rot,
     };
   };
 
-  /* ── Pass 1: interior grid ───────────────────────────────── */
-  const interior: Item[] = [];
+  const interior: MotifItem[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       interior.push(place((c + 0.5) * cellW, (r + 0.5) * cellH));
     }
   }
-  /* Shuffle so the truncation isn't spatially biased — the bottom-right
-   * corner is now just as likely to survive as the top-left. */
-  for (let i = interior.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [interior[i], interior[j]] = [interior[j], interior[i]];
-  }
-  const visible = interior.slice(0, Math.min(cfg.density, interior.length));
+  const visible = evenSample(interior, Math.min(cfg.density, interior.length));
 
-  /* ── Pass 2: spill ring ──────────────────────────────────── */
-  const ring: Item[] = [];
+  const ring: MotifItem[] = [];
   for (let r = -1; r <= rows; r++) {
     for (let c = -1; c <= cols; c++) {
-      if (c >= 0 && c < cols && r >= 0 && r < rows) continue; /* ring only */
+      if (c >= 0 && c < cols && r >= 0 && r < rows) continue;
       ring.push(place((c + 0.5) * cellW, (r + 0.5) * cellH));
     }
   }
@@ -102,16 +124,7 @@ export function PatternLayer({ cfg, w, h }: Props) {
   return (
     <g opacity={cfg.opacity / 100}>
       {items.map((it, i) => (
-        <image
-          key={i}
-          href={it.src}
-          x={it.x - it.sz / 2}
-          y={it.y - it.sz / 2}
-          width={it.sz}
-          height={it.sz}
-          transform={`rotate(${it.rot.toFixed(2)} ${it.x} ${it.y})`}
-          preserveAspectRatio="xMidYMid meet"
-        />
+        <PatternShape key={i} item={it} ink={mark} />
       ))}
     </g>
   );

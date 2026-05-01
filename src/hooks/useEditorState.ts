@@ -2,14 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  applyBackLayoutDefaults,
+  applyFrontLayoutDefaults,
+  backLayoutForOrientation,
   buildBackByPersonIdFromSaved,
   buildFrontByPersonIdFromSaved,
   DEFAULT_PEOPLE,
   defaultBackForPerson,
   defaultFrontForPerson,
+  frontLayoutForOrientation,
+  getCardDims,
   migrateRawBack,
   migrateRawFront,
   normalizeFrontFontScalesForLayout,
+  normalizePerson,
   STORAGE_KEY,
 } from "@/lib/constants";
 import {
@@ -17,7 +23,7 @@ import {
   parsePersonSettingsFile,
   personSettingsDownloadBasename,
 } from "@/lib/personSettingsFile";
-import type { BackState, FrontState, Person } from "@/lib/types";
+import type { BackState, FrontState, Orientation, Person } from "@/lib/types";
 import { useExport } from "./useExport";
 
 /* ── Saved shape in localStorage ─────────────────────────────────── */
@@ -76,10 +82,17 @@ export function useEditorState() {
     [frontByPersonId, selectedPersonId, factoryFront],
   );
 
-  const exportState = useExport(person, {
-    serif: front.fontFamilySerif,
-    sans: front.fontFamilySans,
-  });
+  const orientation: Orientation = person?.orientation ?? "landscape";
+  const cardDims = useMemo(() => getCardDims(orientation), [orientation]);
+
+  const exportState = useExport(
+    person,
+    {
+      serif: front.fontFamilySerif,
+      sans: front.fontFamilySans,
+    },
+    cardDims,
+  );
 
   const factoryBack = useMemo(
     () => defaultBackForPerson(selectedPersonId),
@@ -136,6 +149,31 @@ export function useEditorState() {
     [selectedId, people],
   );
 
+  /* ── Orientation ──────────────────────────────────────────────── */
+  /** Flip the selected person's card orientation and remap front/back layouts
+   *  to their portrait/landscape counterparts (geometry resets to that
+   *  layout's effective defaults so every layout is self-centered). */
+  const setOrientation = useCallback(
+    (next: Orientation) => {
+      const id = selectedId ?? people[0]?.id ?? 1;
+      setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, orientation: next } : p)));
+      setFrontByPersonId((prev) => {
+        const cur = prev[id] ?? defaultFrontForPerson(id);
+        const targetLayout = frontLayoutForOrientation(cur.layout, next);
+        if (targetLayout === cur.layout) return prev;
+        const remapped = applyFrontLayoutDefaults(cur, targetLayout, id);
+        return { ...prev, [id]: normalizeFrontFontScalesForLayout(remapped) };
+      });
+      setBackByPersonId((prev) => {
+        const cur = prev[id] ?? defaultBackForPerson(id);
+        const targetLayout = backLayoutForOrientation(cur.layout, next);
+        if (targetLayout === cur.layout) return prev;
+        return { ...prev, [id]: applyBackLayoutDefaults(cur, targetLayout, id) };
+      });
+    },
+    [selectedId, people],
+  );
+
   /* ── People helpers ───────────────────────────────────────────── */
   const addPerson = useCallback((p: Omit<Person, "id">) => {
     const id = Date.now();
@@ -182,9 +220,11 @@ export function useEditorState() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as Partial<Saved>;
-        const peopleList = saved.people?.length ? saved.people : DEFAULT_PEOPLE;
+        const peopleList = saved.people?.length
+          ? saved.people.map((p) => normalizePerson(p))
+          : DEFAULT_PEOPLE;
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (saved.people?.length) setPeople(saved.people);
+        if (saved.people?.length) setPeople(peopleList);
         setFrontByPersonId(buildFrontByPersonIdFromSaved(saved, peopleList));
         setBackByPersonId(buildBackByPersonIdFromSaved(saved, peopleList));
         if (saved.selectedId != null) setSelectedId(saved.selectedId);
@@ -323,6 +363,8 @@ export function useEditorState() {
     front,
     back,
     person,
+    orientation,
+    cardDims,
     selectedId,
     selectedPersonId,
     factoryFront,
@@ -339,6 +381,8 @@ export function useEditorState() {
     /* back mutations */
     updateBack,
     patchSelectedBack,
+    /* orientation */
+    setOrientation,
     /* people mutations */
     addPerson,
     updatePerson,

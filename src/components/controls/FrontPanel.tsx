@@ -5,7 +5,8 @@ import {
   COLORS,
   defaultFrontForPerson,
   effectiveFontScaleRangeFor,
-  FRONT_LAYOUTS,
+  frontLayoutOrientation,
+  frontLayoutsFor,
   GOOGLE_FONT_OPTIONS,
   normalizeFrontFontScalesForLayout,
   frontFontNamePx,
@@ -72,7 +73,9 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
     front.phoneFill !== factory.phoneFill ||
     front.emailFill !== factory.emailFill;
 
-  const currentLayout = FRONT_LAYOUTS.find((l) => l.id === front.layout)?.name ?? front.layout;
+  const layoutsForOrientation = frontLayoutsFor(frontLayoutOrientation(front.layout));
+  const currentLayout =
+    layoutsForOrientation.find((l) => l.id === front.layout)?.name ?? front.layout;
 
   return (
     <div className="flex flex-col gap-2">
@@ -80,7 +83,7 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
       {/* ── Layout ────────────────────────────────────────── */}
       <Section id="front-layout" title="Layout" summary={currentLayout} defaultOpen>
         <ChipRow
-          options={FRONT_LAYOUTS}
+          options={layoutsForOrientation}
           value={front.layout}
           onChange={(v) =>
             onPatch((f) =>

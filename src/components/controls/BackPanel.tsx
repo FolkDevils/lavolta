@@ -2,10 +2,11 @@
 
 import {
   applyBackLayoutDefaults,
+  backLayoutOrientation,
+  backLayoutsFor,
   BACK_FONT_DISPLAY_SLIDER_RANGE,
   BACK_FONT_MINIMAL_LINK_SLIDER_RANGE,
   BACK_FONT_QR_CAPTION_SLIDER_RANGE,
-  BACK_LAYOUTS,
   clampFontBackDisplay,
   clampFontMinimalLink,
   clampFontQrCaption,
@@ -43,7 +44,9 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
   // Layout-aware + person-aware factory — see FrontPanel for rationale.
   const factory = applyBackLayoutDefaults(defaultBackForPerson(personId), back.layout, personId);
 
-  const currentLayout = BACK_LAYOUTS.find((l) => l.id === back.layout)?.name ?? back.layout;
+  const layoutsForOrientation = backLayoutsFor(backLayoutOrientation(back.layout));
+  const currentLayout =
+    layoutsForOrientation.find((l) => l.id === back.layout)?.name ?? back.layout;
 
   const typeDirty =
     back.fontQrCaption !== factory.fontQrCaption ||
@@ -63,12 +66,12 @@ export function BackPanel({ back, personId, onChange, onPatch }: Props) {
       {/* ── Layout ────────────────────────────────────────── */}
       <Section id="back-layout" title="Layout" summary={currentLayout} defaultOpen>
         <ChipRow
-          options={BACK_LAYOUTS}
+          options={layoutsForOrientation}
           value={back.layout}
           onChange={(v) =>
             onPatch((b) => {
               const next = applyBackLayoutDefaults(b, v, personId);
-              if (v === "one_qr") {
+              if (v === "one_qr" || v === "p_one_qr") {
                 next.qrLinkIds = b.qrLinkIds.length ? [b.qrLinkIds[0]] : ["main"];
               }
               return next;

@@ -295,13 +295,7 @@ export const FD_SOLID_PALETTE: SolidPaletteDef[] = [
   { id: "grayF2", name: "F2F2F2", hex: "#F2F2F2" },
 ];
 
-// ─── Flower pattern assets (optional decorative layer) ───────────────────────
+// ─── Background pattern motifs (vector shapes, no raster assets) ───────────
 
-export const FLOWER_SRCS: string[] = [
-  "/fd/flower_01.png",
-  "/fd/flower_02.png",
-  "/fd/flower_03_b.png",
-];
-
-/** Art-direction size multiplier for each flower. Index matches FLOWER_SRCS. */
-export const FLOWER_SCALE: readonly number[] = [2.0, 1.0, 0.9];
+/** Size multipliers for motif indices 0–2 — uniform so every shape uses the same base scale. */
+export const FLOWER_SCALE: readonly number[] = [1, 1, 1];

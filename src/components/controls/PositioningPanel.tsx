@@ -24,6 +24,9 @@ const STACKED_LAYOUTS = new Set<FrontState["layout"]>([
   "stack_logo_right",
   "centered",
   "bold",
+  "p_centered",
+  "p_stack",
+  "p_logo_top",
 ]);
 
 /** Layouts that render TEL above EMAIL on separate rows (the gap slider is
@@ -32,6 +35,9 @@ const TWO_ROW_CONTACT_LAYOUTS = new Set<FrontState["layout"]>([
   "stack",
   "stack_logo_left",
   "stack_logo_right",
+  "p_stack",
+  "p_centered",
+  "p_logo_top",
 ]);
 
 export function PositioningPanel({ front, personId, onChange }: Props) {

@@ -1,5 +1,4 @@
-import type { BackLayout, BackState, FrontLayout, FrontState } from "./types";
-import { CARD_GEOM_SCALE } from "./print";
+import type { BackLayout, BackState, FrontLayout, FrontState, Orientation } from "./types";
 import {
   BACK_FONT_CAPTION_DEFAULT,
   BACK_FONT_DISPLAY_DEFAULT,
@@ -10,25 +9,45 @@ import {
   CONTACT_TEL_EMAIL_GAP_DEFAULT,
 } from "./typography";
 
-const G = CARD_GEOM_SCALE;
-
 // ─── Front layouts ───────────────────────────────────────────────────────────
 
-export const FRONT_LAYOUTS: { id: FrontLayout; name: string }[] = [
-  { id: "stack", name: "Stack" },
-  { id: "stack_logo_left", name: "Stack · Logo left (centered)" },
-  { id: "stack_logo_right", name: "Stack · Logo right (centered)" },
-  { id: "centered", name: "Centered" },
-  { id: "bold", name: "Bold Name" },
+export type FrontLayoutOption = {
+  id: FrontLayout;
+  name: string;
+  orientation: Orientation;
+};
+
+export const FRONT_LAYOUTS: FrontLayoutOption[] = [
+  /* Landscape */
+  { id: "stack", name: "Stack", orientation: "landscape" },
+  { id: "stack_logo_left", name: "Stack · Logo left (centered)", orientation: "landscape" },
+  { id: "stack_logo_right", name: "Stack · Logo right (centered)", orientation: "landscape" },
+  { id: "centered", name: "Centered", orientation: "landscape" },
+  { id: "bold", name: "Bold Name", orientation: "landscape" },
+  /* Portrait */
+  { id: "p_centered", name: "Centered", orientation: "portrait" },
+  { id: "p_stack", name: "Stack", orientation: "portrait" },
+  { id: "p_logo_top", name: "Hero Logo", orientation: "portrait" },
 ];
 
-const VALID_FRONT_LAYOUT = new Set<FrontLayout>([
-  "stack",
-  "stack_logo_left",
-  "stack_logo_right",
-  "centered",
-  "bold",
-]);
+const FRONT_LAYOUT_ORIENTATION: Record<FrontLayout, Orientation> = FRONT_LAYOUTS.reduce(
+  (acc, opt) => {
+    acc[opt.id] = opt.orientation;
+    return acc;
+  },
+  {} as Record<FrontLayout, Orientation>,
+);
+
+const VALID_FRONT_LAYOUT = new Set<FrontLayout>(Object.keys(FRONT_LAYOUT_ORIENTATION) as FrontLayout[]);
+
+/** Filtered list for the layout-picker UI. */
+export function frontLayoutsFor(orientation: Orientation): FrontLayoutOption[] {
+  return FRONT_LAYOUTS.filter((l) => l.orientation === orientation);
+}
+
+export function frontLayoutOrientation(layout: FrontLayout): Orientation {
+  return FRONT_LAYOUT_ORIENTATION[layout] ?? "landscape";
+}
 
 /** Map legacy/removed layout ids → the closest current layout. */
 export function normalizeFrontLayout(layout: unknown): FrontLayout {
@@ -38,23 +57,84 @@ export function normalizeFrontLayout(layout: unknown): FrontLayout {
   return "stack";
 }
 
+/** Cross-orientation mapping: when the user flips orientation, snap the
+ *  current front layout to the closest counterpart in the target orientation. */
+const FRONT_LAYOUT_COUNTERPART: Record<FrontLayout, { landscape: FrontLayout; portrait: FrontLayout }> = {
+  stack: { landscape: "stack", portrait: "p_stack" },
+  stack_logo_left: { landscape: "stack_logo_left", portrait: "p_centered" },
+  stack_logo_right: { landscape: "stack_logo_right", portrait: "p_centered" },
+  centered: { landscape: "centered", portrait: "p_centered" },
+  bold: { landscape: "bold", portrait: "p_logo_top" },
+  p_centered: { landscape: "centered", portrait: "p_centered" },
+  p_stack: { landscape: "stack", portrait: "p_stack" },
+  p_logo_top: { landscape: "bold", portrait: "p_logo_top" },
+};
+
+export function frontLayoutForOrientation(layout: FrontLayout, orientation: Orientation): FrontLayout {
+  if (frontLayoutOrientation(layout) === orientation) return layout;
+  return FRONT_LAYOUT_COUNTERPART[layout][orientation];
+}
+
 // ─── Back layouts ────────────────────────────────────────────────────────────
 
-export const BACK_LAYOUTS: { id: BackLayout; name: string }[] = [
-  { id: "one_qr", name: "One QR" },
-  { id: "two_qr", name: "Two QRs" },
-  { id: "logo_qr", name: "Logo + QR" },
-  { id: "type", name: "Type Led" },
-  { id: "minimal", name: "Minimal" },
+export type BackLayoutOption = {
+  id: BackLayout;
+  name: string;
+  orientation: Orientation;
+};
+
+export const BACK_LAYOUTS: BackLayoutOption[] = [
+  /* Landscape */
+  { id: "one_qr", name: "One QR", orientation: "landscape" },
+  { id: "two_qr", name: "Two QRs", orientation: "landscape" },
+  { id: "logo_qr", name: "Logo + QR", orientation: "landscape" },
+  { id: "type", name: "Type Led", orientation: "landscape" },
+  { id: "minimal", name: "Minimal", orientation: "landscape" },
+  /* Portrait */
+  { id: "p_one_qr", name: "One QR", orientation: "portrait" },
+  { id: "p_two_qr", name: "Two QRs (stacked)", orientation: "portrait" },
+  { id: "p_logo_qr", name: "Logo + QR", orientation: "portrait" },
 ];
 
-const VALID_BACK_LAYOUT = new Set<BackLayout>(["one_qr", "two_qr", "logo_qr", "type", "minimal"]);
+const BACK_LAYOUT_ORIENTATION: Record<BackLayout, Orientation> = BACK_LAYOUTS.reduce(
+  (acc, opt) => {
+    acc[opt.id] = opt.orientation;
+    return acc;
+  },
+  {} as Record<BackLayout, Orientation>,
+);
+
+const VALID_BACK_LAYOUT = new Set<BackLayout>(Object.keys(BACK_LAYOUT_ORIENTATION) as BackLayout[]);
+
+export function backLayoutsFor(orientation: Orientation): BackLayoutOption[] {
+  return BACK_LAYOUTS.filter((l) => l.orientation === orientation);
+}
+
+export function backLayoutOrientation(layout: BackLayout): Orientation {
+  return BACK_LAYOUT_ORIENTATION[layout] ?? "landscape";
+}
 
 /** Unknown ids fall back to `two_qr` (legacy default). Missing layout uses `whenMissing` (factory default). */
 export function normalizeBackLayout(layout: unknown, whenMissing: BackLayout = "one_qr"): BackLayout {
   if (layout === undefined || layout === null) return whenMissing;
   if (VALID_BACK_LAYOUT.has(layout as BackLayout)) return layout as BackLayout;
   return "two_qr";
+}
+
+const BACK_LAYOUT_COUNTERPART: Record<BackLayout, { landscape: BackLayout; portrait: BackLayout }> = {
+  one_qr: { landscape: "one_qr", portrait: "p_one_qr" },
+  two_qr: { landscape: "two_qr", portrait: "p_two_qr" },
+  logo_qr: { landscape: "logo_qr", portrait: "p_logo_qr" },
+  type: { landscape: "type", portrait: "p_one_qr" },
+  minimal: { landscape: "minimal", portrait: "p_two_qr" },
+  p_one_qr: { landscape: "one_qr", portrait: "p_one_qr" },
+  p_two_qr: { landscape: "two_qr", portrait: "p_two_qr" },
+  p_logo_qr: { landscape: "logo_qr", portrait: "p_logo_qr" },
+};
+
+export function backLayoutForOrientation(layout: BackLayout, orientation: Orientation): BackLayout {
+  if (backLayoutOrientation(layout) === orientation) return layout;
+  return BACK_LAYOUT_COUNTERPART[layout][orientation];
 }
 
 // ─── QR style options ────────────────────────────────────────────────────────
@@ -158,6 +238,7 @@ const FRONT_NEUTRAL_DEFAULTS: FrontLayoutDefaults = {
  *  To tune a layout for a single person, add an entry to
  *  `PERSON_FRONT_LAYOUT_OVERRIDES` below — it merges on top of these. */
 export const FRONT_LAYOUT_DEFAULTS: Record<FrontLayout, FrontLayoutDefaults> = {
+  /* ── Landscape ────────────────────────────────────────────────────────── */
   /** Tuned La Volta stack preset (logo + text position from design panel). */
   stack: {
     ...FRONT_NEUTRAL_DEFAULTS,
@@ -201,6 +282,35 @@ export const FRONT_LAYOUT_DEFAULTS: Record<FrontLayout, FrontLayoutDefaults> = {
   bold: {
     ...FRONT_NEUTRAL_DEFAULTS,
     logoScale: 1.2,
+    nameTitleGap: NAME_TITLE_GAP_DEFAULT_BOLD,
+  },
+
+  /* ── Portrait ─────────────────────────────────────────────────────────── */
+  p_centered: {
+    ...FRONT_NEUTRAL_DEFAULTS,
+    logoScale: 1.5,
+    textOffsetX: 0,
+    nameTitleBlockOffsetY: 69,
+    nameTitleGap: 54,
+    contactOffsetY: 105,
+    contactTelEmailGap: 69,
+  },
+  p_stack: {
+    ...FRONT_NEUTRAL_DEFAULTS,
+    logoScale: 1.9,
+    logoOffsetX: -87,
+    logoOffsetY: 244,
+    textOffsetX: 0,
+    nameTitleBlockOffsetY: 37,
+    nameTitleGap: 44,
+    contactOffsetY: 147,
+    contactTelEmailGap: 56,
+    fontScaleContactLabel: 1.05,
+    fontScaleContactValue: 1.1,
+  },
+  p_logo_top: {
+    ...FRONT_NEUTRAL_DEFAULTS,
+    logoScale: 1.6,
     nameTitleGap: NAME_TITLE_GAP_DEFAULT_BOLD,
   },
 };
@@ -278,11 +388,16 @@ const BACK_NEUTRAL_DEFAULTS: BackLayoutDefaults = {
 /** Global per-layout presets for the back face. Per-person tweaks live in
  *  `PERSON_BACK_LAYOUT_OVERRIDES` and merge on top of these. */
 export const BACK_LAYOUT_DEFAULTS: Record<BackLayout, BackLayoutDefaults> = {
+  /* Landscape */
   one_qr: { ...BACK_NEUTRAL_DEFAULTS },
   two_qr: { ...BACK_NEUTRAL_DEFAULTS },
   logo_qr: { ...BACK_NEUTRAL_DEFAULTS, logoScale: 1.1 },
   type: { ...BACK_NEUTRAL_DEFAULTS },
   minimal: { ...BACK_NEUTRAL_DEFAULTS },
+  /* Portrait */
+  p_one_qr: { ...BACK_NEUTRAL_DEFAULTS },
+  p_two_qr: { ...BACK_NEUTRAL_DEFAULTS },
+  p_logo_qr: { ...BACK_NEUTRAL_DEFAULTS, logoScale: 1.1 },
 };
 
 /** Sparse per-person override on top of BACK_LAYOUT_DEFAULTS. */

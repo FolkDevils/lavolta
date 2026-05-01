@@ -12,7 +12,7 @@ type Props = {
   onDelete: (id: number) => void;
 };
 
-const emptyForm = { name: "", title: "", phone: "", email: "" };
+const emptyForm = { name: "", title: "FOUNDER", phone: "", email: "" };
 
 export function PeopleList({ people, selectedId, onSelect, onAdd, onUpdate, onDelete }: Props) {
   const [adding, setAdding] = useState(false);
