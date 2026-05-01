@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Explicit scan roots — avoids empty CSS on some Vercel/monorepo builds where
+ * automatic source detection does not see all TSX files. */
+@source "../**/*.{js,ts,jsx,tsx}";
+
 /* ─── La Volta design tokens ───────────────────────────────── */
 :root {
   --lv-cream:          #F6F4E8;

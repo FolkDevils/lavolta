@@ -256,16 +256,22 @@ export default function Editor() {
               aria-label="Card face"
               className="flex border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
             >
-              {(["front", "back"] as const).map((f) => (
+              {(
+                [
+                  ["front", "Front"],
+                  ["back", "Back"],
+                ] as const
+              ).map(([f, label]) => (
                 <button
                   key={f}
+                  type="button"
                   onClick={() => switchTab(f)}
                   className={`px-7 py-2 text-[10px] uppercase tracking-[0.12em] min-h-[36px] transition
                     ${tab === f
                       ? "bg-[#6B1E2D] text-[#F6F4E8] font-bold"
                       : "bg-transparent text-[rgba(246,244,232,0.45)] hover:text-[rgba(246,244,232,0.85)]"}`}
                 >
-                  {f}
+                  {label}
                 </button>
               ))}
             </div>
@@ -275,7 +281,12 @@ export default function Editor() {
               aria-label="Card orientation"
               className="flex border border-[rgba(246,244,232,0.2)] rounded-md overflow-hidden"
             >
-              {(["landscape", "portrait"] as const).map((o) => (
+              {(
+                [
+                  ["landscape", "Landscape"],
+                  ["portrait", "Portrait"],
+                ] as const
+              ).map(([o, label]) => (
                 <button
                   key={o}
                   type="button"
@@ -286,7 +297,7 @@ export default function Editor() {
                       ? "bg-[#6B1E2D] text-[#F6F4E8] font-bold"
                       : "bg-transparent text-[rgba(246,244,232,0.45)] hover:text-[rgba(246,244,232,0.85)]"}`}
                 >
-                  {o}
+                  {label}
                 </button>
               ))}
             </div>
