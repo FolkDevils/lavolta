@@ -115,6 +115,9 @@ export type FrontState = {
   fontScaleTitle: number;
   fontScaleContactLabel: number;
   fontScaleContactValue: number;
+  /** Google Font family names (card preview + exports). */
+  fontFamilySerif: string;
+  fontFamilySans: string;
   layout: FrontLayout;
   pat: PatternConfig;
   /** Optional photo layer between solid fill and pattern/content. */

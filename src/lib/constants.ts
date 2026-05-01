@@ -19,3 +19,4 @@ export * from "./defaults";
 export * from "./storage";
 export * from "./faceBg";
 export * from "./logoFilter";
+export * from "./cardFonts";

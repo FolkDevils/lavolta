@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { exportPdf, exportPng, exportSvg } from "@/lib/export";
+import { type CardExportFonts, exportPdf, exportPng, exportSvg } from "@/lib/export";
 import type { Person } from "@/lib/types";
 
-export function useExport(person: Person | undefined) {
+export function useExport(person: Person | undefined, googleFonts: CardExportFonts) {
   const [exporting, setExporting] = useState<null | "svg" | "png" | "pdf">(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -28,13 +28,17 @@ export function useExport(person: Person | undefined) {
     setExporting(kind);
     try {
       if (kind === "svg") {
-        if (which === "front" || which === "both") await exportSvg(f, nameForFile("front.svg"));
-        if (which === "back" || which === "both") await exportSvg(b, nameForFile("back.svg"));
+        if (which === "front" || which === "both")
+          await exportSvg(f, nameForFile("front.svg"), googleFonts);
+        if (which === "back" || which === "both")
+          await exportSvg(b, nameForFile("back.svg"), googleFonts);
       } else if (kind === "png") {
-        if (which === "front" || which === "both") await exportPng(f, nameForFile("front.png"));
-        if (which === "back" || which === "both") await exportPng(b, nameForFile("back.png"));
+        if (which === "front" || which === "both")
+          await exportPng(f, nameForFile("front.png"), googleFonts);
+        if (which === "back" || which === "both")
+          await exportPng(b, nameForFile("back.png"), googleFonts);
       } else if (kind === "pdf") {
-        await exportPdf(f, b, nameForFile("pdf"));
+        await exportPdf(f, b, nameForFile("pdf"), googleFonts);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

@@ -6,6 +6,7 @@ import {
   defaultFrontForPerson,
   effectiveFontScaleRangeFor,
   FRONT_LAYOUTS,
+  GOOGLE_FONT_OPTIONS,
   normalizeFrontFontScalesForLayout,
   frontFontNamePx,
   frontFontTitlePx,
@@ -61,6 +62,10 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
     front.fontScaleContactLabel !== factory.fontScaleContactLabel ||
     front.fontScaleContactValue !== factory.fontScaleContactValue;
 
+  const fontDirty =
+    front.fontFamilySerif !== factory.fontFamilySerif ||
+    front.fontFamilySans !== factory.fontFamilySans;
+
   const colorDirty =
     front.textFill !== factory.textFill ||
     front.subTextFill !== factory.subTextFill ||
@@ -112,7 +117,62 @@ export function FrontPanel({ front, personId, onChange, onPatch }: Props) {
       </Section>
 
       {/* ── Typography ────────────────────────────────────── */}
-      <Section id="front-type" title="Typography" edited={typeDirty}>
+      <Section id="front-type" title="Typography" edited={typeDirty || fontDirty}>
+        <div className="grid gap-2 mb-1">
+          <div>
+            <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1">
+              Heading font
+            </div>
+            <select
+              value={front.fontFamilySerif}
+              onChange={(e) => onChange({ fontFamilySerif: e.target.value })}
+              className="w-full rounded border border-[rgba(246,244,232,0.18)] bg-[#1f1c1a] text-[11px] text-[#F6F4E8] px-2 py-1.5"
+            >
+              {!GOOGLE_FONT_OPTIONS.some((o) => o.id === front.fontFamilySerif) ? (
+                <option value={front.fontFamilySerif}>{front.fontFamilySerif}</option>
+              ) : null}
+              {GOOGLE_FONT_OPTIONS.map((o) => (
+                <option key={`s-${o.id}`} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.4)] mb-1">
+              Body / contact font
+            </div>
+            <select
+              value={front.fontFamilySans}
+              onChange={(e) => onChange({ fontFamilySans: e.target.value })}
+              className="w-full rounded border border-[rgba(246,244,232,0.18)] bg-[#1f1c1a] text-[11px] text-[#F6F4E8] px-2 py-1.5"
+            >
+              {!GOOGLE_FONT_OPTIONS.some((o) => o.id === front.fontFamilySans) ? (
+                <option value={front.fontFamilySans}>{front.fontFamilySans}</option>
+              ) : null}
+              {GOOGLE_FONT_OPTIONS.map((o) => (
+                <option key={`n-${o.id}`} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {fontDirty && (
+          <button
+            type="button"
+            onClick={() =>
+              onPatch((f) => ({
+                ...f,
+                fontFamilySerif: factory.fontFamilySerif,
+                fontFamilySans: factory.fontFamilySans,
+              }))
+            }
+            className="self-start text-[9px] uppercase tracking-[0.1em] text-[rgba(246,244,232,0.45)] hover:text-[#F6F4E8] mb-2"
+          >
+            Reset fonts
+          </button>
+        )}
         <p className="text-[9px] text-[rgba(246,244,232,0.38)] leading-snug">
           Scale multipliers against the layout&apos;s base size.
         </p>

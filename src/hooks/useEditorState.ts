@@ -66,8 +66,6 @@ export function useEditorState() {
     [people, selectedId],
   );
 
-  const exportState = useExport(person);
-
   const factoryFront = useMemo(
     () => defaultFrontForPerson(selectedPersonId),
     [selectedPersonId],
@@ -77,6 +75,11 @@ export function useEditorState() {
     () => frontByPersonId[selectedPersonId] ?? factoryFront,
     [frontByPersonId, selectedPersonId, factoryFront],
   );
+
+  const exportState = useExport(person, {
+    serif: front.fontFamilySerif,
+    sans: front.fontFamilySans,
+  });
 
   const factoryBack = useMemo(
     () => defaultBackForPerson(selectedPersonId),

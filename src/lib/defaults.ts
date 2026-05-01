@@ -30,6 +30,7 @@ import {
 } from "./typography";
 import { clampTextOffsetY as _clampY } from "./palette";
 import { LOGO_ADJUST_DEFAULTS, normalizeLogoImageAdjust } from "./logoFilter";
+import { DEFAULT_FONT_SANS, DEFAULT_FONT_SERIF, sanitizeGoogleFontFamily } from "./cardFonts";
 
 // ─── Pattern defaults ────────────────────────────────────────────────────────
 
@@ -60,6 +61,8 @@ type FrontChrome = Pick<
   | "pat"
   | "bgImage"
   | "logoAdjust"
+  | "fontFamilySerif"
+  | "fontFamilySans"
 >;
 
 /** Shared background/chrome defaults — same across all layouts and people. */
@@ -74,6 +77,8 @@ function defaultFrontChrome(): FrontChrome {
     pat: { ...DEFAULT_PATTERN },
     bgImage: { ...DEFAULT_FACE_BG_IMAGE },
     logoAdjust: { ...LOGO_ADJUST_DEFAULTS },
+    fontFamilySerif: DEFAULT_FONT_SERIF,
+    fontFamilySans: DEFAULT_FONT_SANS,
   };
 }
 
@@ -235,6 +240,8 @@ export function migrateRawFront(
   };
   const merged: FrontState = {
     ...m,
+    fontFamilySerif: sanitizeGoogleFontFamily(m.fontFamilySerif, DEFAULT_FONT_SERIF),
+    fontFamilySans: sanitizeGoogleFontFamily(m.fontFamilySans, DEFAULT_FONT_SANS),
     logo: normalizeLogoId(m.logo),
     logoScale: clampLogoScale(m.logoScale),
     logoOffsetX: clampLogoOffsetX(m.logoOffsetX),

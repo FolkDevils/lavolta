@@ -1,6 +1,10 @@
 "use client";
 
+import { buildGoogleFontsStylesheetHref } from "./cardFonts";
 import { BLEED_IN, DPI, FINISHED_H_IN, FINISHED_W_IN, PX_H, PX_W, VB_H, VB_W } from "./constants";
+
+/** Card text faces — passed into standalone SVG so PNG/PDF raster matches the editor. */
+export type CardExportFonts = { serif: string; sans: string };
 
 /* ──────────────────────────────────────────────────────────
  * Export helpers
@@ -63,10 +67,6 @@ function fetchAsDataUrl(href: string): Promise<string | null> {
   return work;
 }
 
-async function getFontDataUrl(): Promise<string | null> {
-  return fetchAsDataUrl("/fonts/Rubik-VariableFont_wght.ttf");
-}
-
 /** Inline all referenced <image> elements as data URIs. Dedupes hrefs so
  *  a pattern with 30 copies of flower_01.png only fetches that file once. */
 async function inlineImages(svg: SVGSVGElement): Promise<SVGSVGElement> {
@@ -100,8 +100,10 @@ async function inlineImages(svg: SVGSVGElement): Promise<SVGSVGElement> {
 type BuildSvgOpts = {
   /** Use pixel width/height so HTMLImageElement + canvas get a real intrinsic size. */
   forRaster?: boolean;
-  /** Skip font embedding (faster; use when export must be resilient). */
+  /** Skip Google Fonts @import (faster; glyphs may fall back to generics). */
   skipFont?: boolean;
+  /** Load card heading/body fonts inside the SVG (SVG + raster export). */
+  googleFonts?: CardExportFonts;
 };
 
 /** Build a standalone, self-contained SVG string with images inlined. */
@@ -121,20 +123,18 @@ async function buildStandaloneSvg(svg: SVGSVGElement, opts: BuildSvgOpts = {}): 
     clone.setAttribute("height", `${FINISHED_H_IN + 2 * BLEED_IN}in`);
   }
 
-  if (!opts.skipFont) {
-    const fontDataUrl = await getFontDataUrl().catch(() => null);
-    if (fontDataUrl) {
-      const fontCss = `@font-face{font-family:"Rubik";src:url(${fontDataUrl}) format("truetype");font-weight:300 900;font-style:normal;}`;
-      const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
-      styleEl.setAttribute("type", "text/css");
-      styleEl.textContent = fontCss;
-      let defs = clone.querySelector("defs");
-      if (!defs) {
-        defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-        clone.insertBefore(defs, clone.firstChild);
-      }
-      defs.insertBefore(styleEl, defs.firstChild);
+  if (!opts.skipFont && opts.googleFonts) {
+    const href = buildGoogleFontsStylesheetHref(opts.googleFonts.serif, opts.googleFonts.sans);
+    const fontCss = `@import url('${href}');`;
+    const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    styleEl.setAttribute("type", "text/css");
+    styleEl.textContent = fontCss;
+    let defs = clone.querySelector("defs");
+    if (!defs) {
+      defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      clone.insertBefore(defs, clone.firstChild);
     }
+    defs.insertBefore(styleEl, defs.firstChild);
   }
 
   const xml = new XMLSerializer().serializeToString(clone);
@@ -166,9 +166,13 @@ function download(blob: Blob, filename: string) {
   }
 }
 
-export async function exportSvg(svg: SVGSVGElement, filename: string) {
+export async function exportSvg(
+  svg: SVGSVGElement,
+  filename: string,
+  googleFonts?: CardExportFonts,
+) {
   console.log("[export] exportSvg start", filename);
-  const xml = await buildStandaloneSvg(svg);
+  const xml = await buildStandaloneSvg(svg, { googleFonts });
   const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
   download(blob, filename);
   console.log("[export] exportSvg done");
@@ -202,13 +206,16 @@ function loadSvgAsImage(xml: string): Promise<HTMLImageElement> {
 /** Rasterize an SVG element to a PNG blob at the given physical DPI. */
 export async function rasterizeToPng(
   svg: SVGSVGElement,
-  opts: { widthPx?: number; heightPx?: number } = {},
+  opts: { widthPx?: number; heightPx?: number; googleFonts?: CardExportFonts } = {},
 ): Promise<Blob> {
   const widthPx = opts.widthPx ?? PX_W;
   const heightPx = opts.heightPx ?? PX_H;
 
   console.log("[export] rasterizeToPng", widthPx, "x", heightPx);
-  const xml = await buildStandaloneSvg(svg, { forRaster: true });
+  const xml = await buildStandaloneSvg(svg, {
+    forRaster: true,
+    googleFonts: opts.googleFonts,
+  });
   const img = await loadSvgAsImage(xml);
   await (img.decode?.() ?? Promise.resolve()).catch(() => {});
 
@@ -233,9 +240,13 @@ export async function rasterizeToPng(
   });
 }
 
-export async function exportPng(svg: SVGSVGElement, filename: string) {
+export async function exportPng(
+  svg: SVGSVGElement,
+  filename: string,
+  googleFonts?: CardExportFonts,
+) {
   console.log("[export] exportPng start", filename);
-  const blob = await rasterizeToPng(svg);
+  const blob = await rasterizeToPng(svg, { googleFonts });
   download(blob, filename);
   console.log("[export] exportPng done");
 }
@@ -248,6 +259,7 @@ export async function exportPdf(
   frontSvg: SVGSVGElement,
   backSvg: SVGSVGElement,
   filename: string,
+  googleFonts?: CardExportFonts,
 ) {
   console.log("[export] exportPdf start", filename);
   const mod = (await import("jspdf")) as { jsPDF?: unknown; default?: unknown };
@@ -261,8 +273,8 @@ export async function exportPdf(
   if (typeof JsPDF !== "function") throw new Error("jsPDF module did not export a constructor");
 
   const [frontPng, backPng] = await Promise.all([
-    rasterizeToPng(frontSvg),
-    rasterizeToPng(backSvg),
+    rasterizeToPng(frontSvg, { googleFonts }),
+    rasterizeToPng(backSvg, { googleFonts }),
   ]);
 
   const [frontDataUrl, backDataUrl] = await Promise.all([

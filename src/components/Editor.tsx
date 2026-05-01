@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { buildGoogleFontsStylesheetHref } from "@/lib/cardFonts";
 import { EXPORT_SPEC } from "@/lib/export";
 import { useEditorState } from "@/hooks/useEditorState";
 import { CardBack, CardFront } from "./card";
+import { CardFontProvider } from "./card/CardFontContext";
 import { ExportMenu } from "./controls/ExportMenu";
 import { PersonSettingsTransfer } from "./controls/PersonSettingsTransfer";
 import { FrontPanel } from "./controls/FrontPanel";
@@ -34,6 +36,19 @@ export default function Editor() {
   const [flipPhase, setFlipPhase] = useState<"idle" | "out" | "in">("idle");
   const [showGuides, setShowGuides] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
+
+  useEffect(() => {
+    const id = "lavolta-card-google-fonts";
+    document.getElementById(id)?.remove();
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = buildGoogleFontsStylesheetHref(front.fontFamilySerif, front.fontFamilySans);
+    document.head.appendChild(link);
+    return () => {
+      link.remove();
+    };
+  }, [front.fontFamilySerif, front.fontFamilySans]);
 
   /* ── Card flip ──────────────────────────────────────────── */
   const doFlip = (to: "front" | "back") => {
@@ -210,12 +225,14 @@ export default function Editor() {
               aspectRatio: `${EXPORT_SPEC.vb[0]} / ${EXPORT_SPEC.vb[1]}`,
             }}
           >
-            <div style={{ display: face === "front" ? "block" : "none" }} className="w-full h-full">
-              <CardFront ref={frontSvgRef} fs={front} person={person} guides={showGuides} />
-            </div>
-            <div style={{ display: face === "back" ? "block" : "none" }} className="w-full h-full">
-              <CardBack ref={backSvgRef} bs={back} guides={showGuides} />
-            </div>
+            <CardFontProvider serif={front.fontFamilySerif} sans={front.fontFamilySans}>
+              <div style={{ display: face === "front" ? "block" : "none" }} className="w-full h-full">
+                <CardFront ref={frontSvgRef} fs={front} person={person} guides={showGuides} />
+              </div>
+              <div style={{ display: face === "back" ? "block" : "none" }} className="w-full h-full">
+                <CardBack ref={backSvgRef} bs={back} guides={showGuides} />
+              </div>
+            </CardFontProvider>
           </div>
 
           {/* Face toggle */}

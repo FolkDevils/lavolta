@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { BLEED, SAFE_INSET, VB_H, VB_W } from "@/lib/constants";
+import { useCardFonts } from "./CardFontContext";
 import type { COLORS } from "@/lib/constants";
 import type { FaceBgImageConfig } from "@/lib/types";
 import { toHex6 } from "@/lib/color";
@@ -125,10 +126,11 @@ type TxtProps = React.SVGProps<SVGTextElement> & {
   variant?: "serif" | "sans";
 };
 export function Txt({ children, variant = "serif", ...p }: TxtProps) {
+  const { serif, sans } = useCardFonts();
   const stack =
     variant === "sans"
-      ? "var(--font-red-hat), 'Red Hat Text', ui-sans-serif, system-ui, sans-serif"
-      : "var(--font-newsreader), Newsreader, ui-serif, Georgia, serif";
+      ? `"${sans}", ui-sans-serif, system-ui, sans-serif`
+      : `"${serif}", ui-serif, Georgia, serif`;
   return (
     <text fontFamily={stack} {...p}>
       {children}
